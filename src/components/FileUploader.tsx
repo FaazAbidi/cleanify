@@ -170,55 +170,125 @@ export const FileUploader = ({ onDataLoaded, label = "Upload CSV" }: FileUploade
     });
   };
   
-  const calculateCorrelation = (data: any[][], columnNames: string[], columnTypes: Record<string, string>): { matrix: number[][], labels: string[] } => {
-    // Only include numeric columns
-    const numericColumnIndices = columnNames
-      .map((name, idx) => ({ name, idx }))
-      .filter(col => columnTypes[col.name] === 'numeric');
-    
-    const labels = numericColumnIndices.map(col => col.name);
-    const indices = numericColumnIndices.map(col => col.idx);
-    
-    // Initialize correlation matrix
-    const matrix: number[][] = Array(indices.length)
-      .fill(0)
-      .map(() => Array(indices.length).fill(0));
-    
-    // Calculate correlation for each pair of columns
-    for (let i = 0; i < indices.length; i++) {
-      // Perfect correlation with itself
-      matrix[i][i] = 1;
+  const calculateCorrelation = (data: any[][], columnNames: string[], columnTypes: Record<string, string>): Promise<{ matrix: number[][], labels: string[] }> => {
+    return new Promise((resolve) => {
+      // Only include numeric columns
+      const numericColumnIndices = columnNames
+        .map((name, idx) => ({ name, idx }))
+        .filter(col => columnTypes[col.name] === 'numeric');
       
-      for (let j = i + 1; j < indices.length; j++) {
-        const col1 = data.map(row => parseFloat(row[indices[i]])).filter(val => !isNaN(val));
-        const col2 = data.map(row => parseFloat(row[indices[j]])).filter(val => !isNaN(val));
+      const labels = numericColumnIndices.map(col => col.name);
+      const indices = numericColumnIndices.map(col => col.idx);
+      
+      // If we have too many numeric columns, sample them to prevent browser crashes
+      const maxColumns = 30; // Limit to prevent browser from freezing
+      let sampledIndices = indices;
+      let sampledLabels = labels;
+      
+      if (indices.length > maxColumns) {
+        // Take a sample of columns if there are too many
+        sampledIndices = [];
+        sampledLabels = [];
         
-        // Only calculate if we have enough data points
-        if (col1.length > 5 && col2.length > 5) {
-          // Calculate means
-          const mean1 = col1.reduce((a, b) => a + b, 0) / col1.length;
-          const mean2 = col2.reduce((a, b) => a + b, 0) / col2.length;
-          
-          // Calculate correlation
-          let num = 0, den1 = 0, den2 = 0;
-          
-          for (let k = 0; k < Math.min(col1.length, col2.length); k++) {
-            const diff1 = col1[k] - mean1;
-            const diff2 = col2[k] - mean2;
-            
-            num += diff1 * diff2;
-            den1 += diff1 * diff1;
-            den2 += diff2 * diff2;
-          }
-          
-          const corr = num / Math.sqrt(den1 * den2);
-          matrix[i][j] = Math.round(corr * 100) / 100;
-          matrix[j][i] = matrix[i][j]; // Correlation matrix is symmetric
+        const step = Math.ceil(indices.length / maxColumns);
+        for (let i = 0; i < indices.length; i += step) {
+          sampledIndices.push(indices[i]);
+          sampledLabels.push(labels[i]);
         }
       }
-    }
-    
-    return { matrix, labels };
+      
+      // Initialize correlation matrix
+      const matrix: number[][] = Array(sampledIndices.length)
+        .fill(0)
+        .map(() => Array(sampledIndices.length).fill(0));
+        
+      // Calculate matrix in chunks to prevent UI freezing
+      let row = 0;
+      let col = 0;
+      
+      // Function to process a batch of correlation calculations
+      const processBatch = () => {
+        const batchStart = Date.now();
+        
+        // Process for a limited time to avoid UI freezing
+        while (Date.now() - batchStart < 50 && row < sampledIndices.length) {
+          if (row === col) {
+            // Perfect correlation with itself
+            matrix[row][col] = 1;
+            col++;
+            
+            if (col >= sampledIndices.length) {
+              row++;
+              col = row;
+            }
+            continue;
+          }
+          
+          // Sample the data to speed up calculation for large datasets
+          const maxSamples = 5000;
+          let col1 = data.map(row => parseFloat(row[sampledIndices[row]])).filter(val => !isNaN(val));
+          let col2 = data.map(row => parseFloat(row[sampledIndices[col]])).filter(val => !isNaN(val));
+          
+          // Sample data if too large
+          if (col1.length > maxSamples) {
+            const sampleStep = Math.floor(col1.length / maxSamples);
+            col1 = col1.filter((_, i) => i % sampleStep === 0);
+          }
+          
+          if (col2.length > maxSamples) {
+            const sampleStep = Math.floor(col2.length / maxSamples);
+            col2 = col2.filter((_, i) => i % sampleStep === 0);
+          }
+          
+          // Only calculate if we have enough data points
+          if (col1.length > 5 && col2.length > 5) {
+            // Calculate means
+            const mean1 = col1.reduce((a, b) => a + b, 0) / col1.length;
+            const mean2 = col2.reduce((a, b) => a + b, 0) / col2.length;
+            
+            // Calculate correlation
+            let num = 0, den1 = 0, den2 = 0;
+            
+            for (let k = 0; k < Math.min(col1.length, col2.length); k++) {
+              const diff1 = col1[k] - mean1;
+              const diff2 = col2[k] - mean2;
+              
+              num += diff1 * diff2;
+              den1 += diff1 * diff1;
+              den2 += diff2 * diff2;
+            }
+            
+            const corr = den1 > 0 && den2 > 0 ? num / Math.sqrt(den1 * den2) : 0;
+            matrix[row][col] = Math.round(corr * 100) / 100;
+            matrix[col][row] = matrix[row][col]; // Correlation matrix is symmetric
+          } else {
+            matrix[row][col] = 0;
+            matrix[col][row] = 0;
+          }
+          
+          col++;
+          
+          if (col >= sampledIndices.length) {
+            row++;
+            col = row;
+          }
+        }
+        
+        // Calculate progress percentage (rows completed / total rows)
+        const progressPercent = (row / sampledIndices.length) * 100;
+        
+        // If not done, schedule next batch
+        if (row < sampledIndices.length) {
+          setTimeout(processBatch, 0);
+        } else {
+          // We're done, resolve the promise
+          resolve({ matrix, labels: sampledLabels });
+        }
+      };
+      
+      // Start batch processing
+      setTimeout(processBatch, 0);
+    });
   };
   
   const countDuplicateRows = (data: any[][]): number => {
@@ -315,11 +385,7 @@ export const FileUploader = ({ onDataLoaded, label = "Upload CSV" }: FileUploade
       setProgress(95);
       
       // Calculate correlations (potentially expensive)
-      const correlationData = await new Promise<{ matrix: number[][], labels: string[] }>(resolve => {
-        setTimeout(() => {
-          resolve(calculateCorrelation(dataRows, columnNames, columnTypes));
-        }, 0);
-      });
+      const correlationData = await calculateCorrelation(dataRows, columnNames, columnTypes);
 
       setProgress(100);
       
