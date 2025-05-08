@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
@@ -13,6 +12,7 @@ interface FileUploaderProps {
 export const FileUploader = ({ onDataLoaded, label = "Upload CSV" }: FileUploaderProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const fileInputRef = useState<HTMLInputElement | null>(null)[1];
 
   const inferDataType = (values: any[]): 'numeric' | 'categorical' | 'datetime' | 'text' | 'boolean' => {
     const nonNullValues = values.filter(val => val !== null && val !== undefined && val !== '');
@@ -258,6 +258,9 @@ export const FileUploader = ({ onDataLoaded, label = "Upload CSV" }: FileUploade
         });
       } finally {
         setIsLoading(false);
+        if (event.target) {
+          event.target.value = ''; // Reset the input so the same file can be uploaded again
+        }
       }
     };
 
@@ -273,24 +276,27 @@ export const FileUploader = ({ onDataLoaded, label = "Upload CSV" }: FileUploade
     reader.readAsText(file);
   };
 
+  const handleButtonClick = () => {
+    document.getElementById('file-upload')?.click();
+  };
+
   return (
     <div className="flex flex-col items-center">
-      <label htmlFor="file-upload" className="cursor-pointer">
-        <div className="flex items-center">
-          <Button disabled={isLoading}>
-            <Upload className="mr-2 h-4 w-4" />
-            {isLoading ? "Processing..." : label}
-          </Button>
-        </div>
-        <input
-          id="file-upload"
-          type="file"
-          className="hidden"
-          accept=".csv"
-          onChange={handleFileUpload}
-          disabled={isLoading}
-        />
-      </label>
+      <Button 
+        onClick={handleButtonClick} 
+        disabled={isLoading}
+      >
+        <Upload className="mr-2 h-4 w-4" />
+        {isLoading ? "Processing..." : label}
+      </Button>
+      <input
+        id="file-upload"
+        type="file"
+        className="hidden"
+        accept=".csv"
+        onChange={handleFileUpload}
+        disabled={isLoading}
+      />
       <p className="text-xs text-gray-500 mt-2">Supports CSV files</p>
     </div>
   );
