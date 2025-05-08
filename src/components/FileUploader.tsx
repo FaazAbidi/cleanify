@@ -276,7 +276,7 @@ export const FileUploader = ({ onDataLoaded, label = "Upload CSV" }: FileUploade
   return (
     <div className="flex flex-col items-center">
       <label htmlFor="file-upload" className="cursor-pointer">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center">
           <Button disabled={isLoading}>
             <Upload className="mr-2 h-4 w-4" />
             {isLoading ? "Processing..." : label}
