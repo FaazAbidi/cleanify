@@ -1,78 +1,71 @@
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
 const AuthCallback = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
+    // Get the code from the URL
+    const code = searchParams.get('code');
+
+    if (!code) {
+      setError("No auth code found in URL");
+      return;
+    }
+
+    // Handle the OAuth or email confirmation redirect
     const handleAuthCallback = async () => {
       try {
-        // Get the auth code from the URL
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const accessToken = hashParams.get('access_token');
-        const refreshToken = hashParams.get('refresh_token');
-
-        // If we have tokens in the URL, set them
-        if (accessToken && refreshToken) {
-          const { error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-
-          if (error) throw error;
-        }
-
-        // Get the current session
-        const { data: { session }, error } = await supabase.auth.getSession();
-
-        if (error) {
-          setError(error.message);
-          return;
-        }
-
-        if (session) {
-          // Redirect to the dashboard after successful auth
-          navigate("/dashboard", { replace: true });
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+        
+        if (error) throw error;
+        
+        if (data.session) {
+          // Redirect to the dashboard on successful authentication
+          navigate('/dashboard');
         } else {
-          // No session found
-          setError("No session found. Please try logging in again.");
+          setError("Failed to get session from code");
         }
       } catch (err: any) {
         console.error("Auth callback error:", err);
-        setError("An unexpected error occurred.");
+        setError(err.message || "An error occurred during authentication");
       }
     };
 
     handleAuthCallback();
-  }, [navigate]);
+  }, [navigate, searchParams]);
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Authentication Error</h1>
-          <p className="text-destructive mb-4">{error}</p>
-          <button
-            onClick={() => navigate("/login")}
-            className="text-primary hover:underline"
-          >
-            Return to login
-          </button>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="mx-auto max-w-md p-6 bg-white rounded-lg shadow-md">
+          <h1 className="text-xl font-semibold text-red-600 mb-2">Authentication Error</h1>
+          <p className="text-gray-700">{error}</p>
+          <div className="mt-6">
+            <button 
+              onClick={() => navigate('/login')}
+              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
+            >
+              Return to Login
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
+  // Show loading state while processing
   return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="flex min-h-screen items-center justify-center">
       <div className="text-center">
-        <h1 className="text-2xl font-bold mb-4">Processing authentication...</h1>
-        <p className="mb-4">Please wait while we complete the authentication process.</p>
-        <Loader2 className="animate-spin h-8 w-8 mx-auto" />
+        <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+        <h1 className="mt-4 text-xl font-semibold">Processing authentication...</h1>
+        <p className="mt-2 text-gray-600">Please wait while we complete the authentication process.</p>
       </div>
     </div>
   );

@@ -39,6 +39,17 @@ export const Navbar = () => {
                   Dashboard
                 </Link>
               </Button>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/tasks">
+                  Tasks
+                </Link>
+              </Button>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/profile">
+                  <User className="h-5 w-5 mr-1" />
+                  Profile
+                </Link>
+              </Button>
               <Button 
                 variant="outline" 
                 size="sm" 
