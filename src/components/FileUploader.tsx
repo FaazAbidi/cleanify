@@ -281,7 +281,7 @@ export const FileUploader = ({ onDataLoaded, label = "Upload CSV" }: FileUploade
 
       // Process columns in batches
       setProgress(70); // CSV parsing is done
-      const columnTypes: Record<string, 'numeric' | 'categorical' | 'datetime' | 'text' | 'boolean'> = {};
+      const columnTypes: Record<string, string> = {};
       const columns: ColumnInfo[] = [];
       
       // Process columns in batches of 10 to avoid blocking UI
