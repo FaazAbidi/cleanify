@@ -1,22 +1,10 @@
 
 import { AppSidebar } from "@/components/AppSidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
 
 const Dashboard = () => {
-  const [user, setUser] = useState<{ name?: string, email: string } | null>(null);
-
-  useEffect(() => {
-    // Get user from localStorage
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
-
-  if (!user) {
-    return <div>Loading...</div>;
-  }
+  const { user, profile } = useAuth();
 
   return (
     <AppSidebar>
@@ -25,7 +13,9 @@ const Dashboard = () => {
           <CardHeader className="pb-2">
             <CardTitle>Welcome</CardTitle>
             <CardDescription>
-              {user.name ? `Welcome back, ${user.name}!` : `Welcome back!`}
+              {profile?.username || profile?.full_name 
+                ? `Welcome back, ${profile.full_name || profile.username}!` 
+                : `Welcome back, ${user?.email?.split('@')[0]}!`}
             </CardDescription>
           </CardHeader>
           <CardContent>
