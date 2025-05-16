@@ -4,6 +4,7 @@ import { Upload } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { DatasetType, ColumnInfo } from "@/types/dataset";
 import { Progress } from "@/components/ui/progress";
+import { calculateColumnStats, inferDataType } from "@/lib/data-utils";
 
 interface FileUploaderProps {
   onDataLoaded: (data: DatasetType) => void;
@@ -15,92 +16,6 @@ export const FileUploader = ({ onDataLoaded, label = "Upload CSV" }: FileUploade
   const [progress, setProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-
-  const inferDataType = (values: any[]): 'numeric' | 'categorical' | 'datetime' | 'text' | 'boolean' => {
-    const nonNullValues = values.filter(val => val !== null && val !== undefined && val !== '');
-    if (nonNullValues.length === 0) return 'text';
-
-    const numericCount = nonNullValues.filter(val => !isNaN(Number(val))).length;
-    const booleanCount = nonNullValues.filter(val => val === 'true' || val === 'false' || val === true || val === false).length;
-    const dateCount = nonNullValues.filter(val => !isNaN(Date.parse(String(val)))).length;
-
-    if (numericCount / nonNullValues.length > 0.8) return 'numeric';
-    if (booleanCount / nonNullValues.length > 0.8) return 'boolean';
-    if (dateCount / nonNullValues.length > 0.8) return 'datetime';
-    
-    const uniqueValuesRatio = new Set(nonNullValues).size / nonNullValues.length;
-    return uniqueValuesRatio < 0.2 ? 'categorical' : 'text';
-  };
-
-  const calculateColumnStats = (columnData: any[], type: 'numeric' | 'categorical' | 'datetime' | 'text' | 'boolean'): Partial<ColumnInfo> => {
-    const nonNullValues = columnData.filter(val => val !== null && val !== undefined && val !== '');
-    const stats: Partial<ColumnInfo> = {
-      uniqueValues: new Set(columnData).size,
-      missingValues: columnData.length - nonNullValues.length,
-      missingPercent: ((columnData.length - nonNullValues.length) / columnData.length) * 100,
-    };
-
-    if (type === 'numeric') {
-      const numericValues = nonNullValues.map(Number).filter(val => !isNaN(val));
-      if (numericValues.length > 0) {
-        numericValues.sort((a, b) => a - b);
-        stats.min = Math.min(...numericValues);
-        stats.max = Math.max(...numericValues);
-        stats.mean = numericValues.reduce((a, b) => a + b, 0) / numericValues.length;
-        stats.median = numericValues[Math.floor(numericValues.length / 2)];
-        
-        // Calculate standard deviation
-        const mean = stats.mean as number;
-        stats.std = Math.sqrt(
-          numericValues.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / numericValues.length
-        );
-        
-        // Calculate distribution (simplified histogram)
-        const distribution: Record<number, number> = {};
-        const buckets = 5;
-        const range = stats.max as number - (stats.min as number);
-        const bucketSize = range / buckets;
-        
-        for (let i = 0; i < buckets; i++) {
-          const bucketMin = (stats.min as number) + i * bucketSize;
-          const bucketMax = bucketMin + bucketSize;
-          const bucketKey = bucketMin;
-          distribution[bucketKey] = numericValues.filter(
-            val => val >= bucketMin && val < bucketMax
-          ).length;
-        }
-        stats.distribution = distribution;
-        
-        // Simple outlier detection (values outside 1.5 * IQR)
-        const q1Index = Math.floor(numericValues.length / 4);
-        const q3Index = Math.floor(3 * numericValues.length / 4);
-        const iqr = numericValues[q3Index] - numericValues[q1Index];
-        stats.outliers = numericValues.filter(
-          val => val < numericValues[q1Index] - 1.5 * iqr || val > numericValues[q3Index] + 1.5 * iqr
-        ).length;
-      }
-    } else if (type === 'categorical' || type === 'boolean') {
-      // Calculate frequency distribution
-      const distribution: Record<string, number> = {};
-      nonNullValues.forEach(val => {
-        distribution[val] = (distribution[val] || 0) + 1;
-      });
-      stats.distribution = distribution;
-      
-      // Find mode
-      let maxFreq = 0;
-      let mode: string | undefined;
-      Object.entries(distribution).forEach(([val, freq]) => {
-        if (freq > maxFreq) {
-          maxFreq = freq;
-          mode = val;
-        }
-      });
-      stats.mode = mode;
-    }
-    
-    return stats;
-  };
 
   const parseCSVInChunks = (text: string, chunkSize = 1000): Promise<any[][]> => {
     return new Promise((resolve) => {
@@ -190,105 +105,143 @@ export const FileUploader = ({ onDataLoaded, label = "Upload CSV" }: FileUploade
         sampledIndices = [];
         sampledLabels = [];
         
-        const step = Math.ceil(indices.length / maxColumns);
-        for (let i = 0; i < indices.length; i += step) {
+        // Always include first few columns for consistency
+        const firstColumns = 5;
+        for (let i = 0; i < Math.min(firstColumns, indices.length); i++) {
           sampledIndices.push(indices[i]);
           sampledLabels.push(labels[i]);
         }
+        
+        // Then sample the rest
+        const step = Math.ceil((indices.length - firstColumns) / (maxColumns - firstColumns));
+        for (let i = firstColumns; i < indices.length; i += step) {
+          if (sampledIndices.length < maxColumns) {
+            sampledIndices.push(indices[i]);
+            sampledLabels.push(labels[i]);
+          }
+        }
       }
       
-      // Initialize correlation matrix
-      const matrix: number[][] = Array(sampledIndices.length)
-        .fill(0)
+      // Create empty correlation matrix
+      const matrix: number[][] = Array(sampledIndices.length).fill(0)
         .map(() => Array(sampledIndices.length).fill(0));
-        
-      // Calculate matrix in chunks to prevent UI freezing
-      let row = 0;
-      let col = 0;
       
-      // Function to process a batch of correlation calculations
+      // Fill matrix diagonal with 1's (self-correlation)
+      for (let i = 0; i < sampledIndices.length; i++) {
+        matrix[i][i] = 1;
+      }
+      
+      // Split processing into batches to avoid blocking UI
+      const totalPairs = (sampledIndices.length * (sampledIndices.length - 1)) / 2;
+      let processedPairs = 0;
+      let batchSize = 100; // Process 100 correlations at a time
+      
+      // Process correlations in batches
       const processBatch = () => {
-        const batchStart = Date.now();
+        const startTime = Date.now();
+        let pairsInBatch = 0;
         
-        // Process for a limited time to avoid UI freezing
-        while (Date.now() - batchStart < 50 && row < sampledIndices.length) {
-          if (row === col) {
-            // Perfect correlation with itself
-            matrix[row][col] = 1;
-            col++;
+        // For each pair of columns
+        outerLoop: for (let i = 0; i < sampledIndices.length; i++) {
+          for (let j = i + 1; j < sampledIndices.length; j++) {
+            // Skip if already calculated
+            if (matrix[i][j] !== 0) continue;
             
-            if (col >= sampledIndices.length) {
-              row++;
-              col = row;
-            }
-            continue;
-          }
-          
-          // Sample the data to speed up calculation for large datasets
-          const maxSamples = 5000;
-          let col1 = data.map(row => parseFloat(row[sampledIndices[row]])).filter(val => !isNaN(val));
-          let col2 = data.map(row => parseFloat(row[sampledIndices[col]])).filter(val => !isNaN(val));
-          
-          // Sample data if too large
-          if (col1.length > maxSamples) {
-            const sampleStep = Math.floor(col1.length / maxSamples);
-            col1 = col1.filter((_, i) => i % sampleStep === 0);
-          }
-          
-          if (col2.length > maxSamples) {
-            const sampleStep = Math.floor(col2.length / maxSamples);
-            col2 = col2.filter((_, i) => i % sampleStep === 0);
-          }
-          
-          // Only calculate if we have enough data points
-          if (col1.length > 5 && col2.length > 5) {
-            // Calculate means
-            const mean1 = col1.reduce((a, b) => a + b, 0) / col1.length;
-            const mean2 = col2.reduce((a, b) => a + b, 0) / col2.length;
+            const colIndex1 = sampledIndices[i];
+            const colIndex2 = sampledIndices[j];
             
-            // Calculate correlation
-            let num = 0, den1 = 0, den2 = 0;
+            // Extract data for both columns, filter out non-numeric values
+            const colData1: number[] = [];
+            const colData2: number[] = [];
             
-            for (let k = 0; k < Math.min(col1.length, col2.length); k++) {
-              const diff1 = col1[k] - mean1;
-              const diff2 = col2[k] - mean2;
+            for (let k = 0; k < data.length; k++) {
+              const val1 = parseFloat(data[k][colIndex1]);
+              const val2 = parseFloat(data[k][colIndex2]);
               
-              num += diff1 * diff2;
-              den1 += diff1 * diff1;
-              den2 += diff2 * diff2;
+              if (!isNaN(val1) && !isNaN(val2)) {
+                colData1.push(val1);
+                colData2.push(val2);
+              }
             }
             
-            const corr = den1 > 0 && den2 > 0 ? num / Math.sqrt(den1 * den2) : 0;
-            matrix[row][col] = Math.round(corr * 100) / 100;
-            matrix[col][row] = matrix[row][col]; // Correlation matrix is symmetric
-          } else {
-            matrix[row][col] = 0;
-            matrix[col][row] = 0;
-          }
-          
-          col++;
-          
-          if (col >= sampledIndices.length) {
-            row++;
-            col = row;
+            // Calculate correlation if we have enough data points
+            if (colData1.length > 1) {
+              const correlation = calculatePearsonCorrelation(colData1, colData2);
+              
+              // Store correlation in matrix (symmetric)
+              matrix[i][j] = correlation;
+              matrix[j][i] = correlation;
+            } else {
+              // Not enough data for correlation
+              matrix[i][j] = 0;
+              matrix[j][i] = 0;
+            }
+            
+            pairsInBatch++;
+            processedPairs++;
+            
+            // Check if batch limit reached or taking too long (50ms)
+            if (pairsInBatch >= batchSize || Date.now() - startTime > 50) {
+              break outerLoop;
+            }
           }
         }
         
-        // Calculate progress percentage (rows completed / total rows)
-        const progressPercent = (row / sampledIndices.length) * 100;
+        // Update progress for correlation calculation
+        const correlationProgress = Math.min(95, 70 + Math.floor((processedPairs / totalPairs) * 25));
+        setProgress(correlationProgress);
         
-        // If not done, schedule next batch
-        if (row < sampledIndices.length) {
-          setTimeout(processBatch, 0);
-        } else {
-          // We're done, resolve the promise
+        // Check if all pairs processed
+        const allProcessed = processedPairs >= totalPairs;
+        
+        if (allProcessed) {
           resolve({ matrix, labels: sampledLabels });
+        } else {
+          // Schedule next batch with a small delay to allow UI updates
+          setTimeout(processBatch, 0);
         }
       };
       
-      // Start batch processing
-      setTimeout(processBatch, 0);
+      // Start processing
+      if (sampledIndices.length > 0) {
+        processBatch();
+      } else {
+        resolve({ matrix: [], labels: [] });
+      }
     });
+  };
+  
+  // Helper function to calculate Pearson correlation
+  const calculatePearsonCorrelation = (x: number[], y: number[]): number => {
+    // Must have same length
+    if (x.length !== y.length || x.length === 0) {
+      return 0;
+    }
+    
+    // Calculate means
+    const meanX = x.reduce((sum, val) => sum + val, 0) / x.length;
+    const meanY = y.reduce((sum, val) => sum + val, 0) / y.length;
+    
+    // Calculate covariance and standard deviations
+    let covariance = 0;
+    let varX = 0;
+    let varY = 0;
+    
+    for (let i = 0; i < x.length; i++) {
+      const xDiff = x[i] - meanX;
+      const yDiff = y[i] - meanY;
+      covariance += xDiff * yDiff;
+      varX += xDiff * xDiff;
+      varY += yDiff * yDiff;
+    }
+    
+    // Prevent division by zero
+    if (varX === 0 || varY === 0) {
+      return 0;
+    }
+    
+    // Return Pearson correlation coefficient
+    return covariance / (Math.sqrt(varX) * Math.sqrt(varY));
   };
   
   const countDuplicateRows = (data: any[][]): number => {
