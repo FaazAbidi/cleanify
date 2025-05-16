@@ -93,7 +93,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   // Sign in with email and password
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string): Promise<void> => {
     try {
       const { error, data } = await supabase.auth.signInWithPassword({
         email,
@@ -121,7 +121,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   // Sign up with email and password
-  const signUp = async (email: string, password: string, username: string) => {
+  const signUp = async (email: string, password: string, username: string): Promise<void> => {
     try {
       const { error, data } = await supabase.auth.signUp({
         email,
@@ -165,7 +165,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   // Sign out
-  const signOut = async () => {
+  const signOut = async (): Promise<void> => {
     try {
       const { error } = await supabase.auth.signOut();
       
@@ -190,11 +190,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         description: error.message || "There was an error signing out.",
         variant: "destructive",
       });
+      throw error;
     }
   };
 
   // Reset password
-  const resetPassword = async (email: string) => {
+  const resetPassword = async (email: string): Promise<void> => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
@@ -215,11 +216,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         description: error.message || "There was an error sending the password reset email.",
         variant: "destructive",
       });
+      throw error;
     }
   };
 
   // Update password
-  const updatePassword = async (newPassword: string) => {
+  const updatePassword = async (newPassword: string): Promise<void> => {
     try {
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
@@ -240,6 +242,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         description: error.message || "There was an error updating your password.",
         variant: "destructive",
       });
+      throw error;
     }
   };
 
