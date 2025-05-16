@@ -3,13 +3,21 @@ import { Link, useLocation } from "react-router-dom";
 import { ChartBar, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useState } from "react";
+import { Loader2 } from "lucide-react";
 
 export const Navbar = () => {
   const location = useLocation();
   const { user, signOut } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
-    await signOut();
+    setIsLoggingOut(true);
+    try {
+      await signOut();
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -31,8 +39,18 @@ export const Navbar = () => {
                   Dashboard
                 </Link>
               </Button>
-              <Button variant="outline" size="sm" onClick={handleLogout}>
-                Logout
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+              >
+                {isLoggingOut ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    Logging out...
+                  </>
+                ) : "Logout"}
               </Button>
             </>
           ) : (
