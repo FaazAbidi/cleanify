@@ -9,16 +9,245 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      Categories: {
+        Row: {
+          created_at: string
+          description: string
+          id: number
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: number
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: number
+          name?: string
+        }
+        Relationships: []
+      }
+      CategoryMethods: {
+        Row: {
+          category_id: number
+          created_at: string
+          id: number
+          method_id: number
+        }
+        Insert: {
+          category_id: number
+          created_at?: string
+          id?: number
+          method_id: number
+        }
+        Update: {
+          category_id?: number
+          created_at?: string
+          id?: number
+          method_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "CategoryMethods_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "Categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "CategoryMethods_method_id_fkey"
+            columns: ["method_id"]
+            isOneToOne: false
+            referencedRelation: "Methods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      Files: {
+        Row: {
+          created_at: string
+          id: number
+          modified_at: string | null
+          path: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          modified_at?: string | null
+          path: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          modified_at?: string | null
+          path?: string
+        }
+        Relationships: []
+      }
+      Methods: {
+        Row: {
+          created_at: string
+          description: string
+          id: number
+          label: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: number
+          label?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: number
+          label?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      TaskMethods: {
+        Row: {
+          created_at: string
+          id: number
+          method_id: number | null
+          task_id: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          method_id?: number | null
+          task_id?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          method_id?: number | null
+          task_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "TaskMethods_method_id_fkey"
+            columns: ["method_id"]
+            isOneToOne: false
+            referencedRelation: "Methods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "TaskMethods_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "Tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      Tasks: {
+        Row: {
+          category: number
+          created_at: string
+          id: number
+          methods: number[]
+          modified_at: string
+          name: string
+          processed_data: number | null
+          raw_data: number
+          status: Database["public"]["Enums"]["status"]
+          user_id: string
+        }
+        Insert: {
+          category: number
+          created_at?: string
+          id?: number
+          methods: number[]
+          modified_at?: string
+          name: string
+          processed_data?: number | null
+          raw_data: number
+          status: Database["public"]["Enums"]["status"]
+          user_id?: string
+        }
+        Update: {
+          category?: number
+          created_at?: string
+          id?: number
+          methods?: number[]
+          modified_at?: string
+          name?: string
+          processed_data?: number | null
+          raw_data?: number
+          status?: Database["public"]["Enums"]["status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "Tasks_category_fkey"
+            columns: ["category"]
+            isOneToOne: false
+            referencedRelation: "Categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "Tasks_processed_data_fkey"
+            columns: ["processed_data"]
+            isOneToOne: false
+            referencedRelation: "Files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "Tasks_raw_data_fkey"
+            columns: ["raw_data"]
+            isOneToOne: false
+            referencedRelation: "Files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_enum_values: {
+        Args: { enum_name: string }
+        Returns: {
+          value: string
+        }[]
+      }
     }
     Enums: {
-      [_ in never]: never
+      category: "cat_1" | "cat_2" | "cat_3"
+      method: "method_1" | "method_2" | "method_3"
+      status: "RUNNING" | "RAW" | "PROCESSED"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +362,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      category: ["cat_1", "cat_2", "cat_3"],
+      method: ["method_1", "method_2", "method_3"],
+      status: ["RUNNING", "RAW", "PROCESSED"],
+    },
   },
 } as const

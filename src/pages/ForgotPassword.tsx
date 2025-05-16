@@ -8,21 +8,19 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Navbar } from "@/components/Navbar";
 import { useAuth } from "@/hooks/useAuth";
 
-const Register = () => {
-  const [name, setName] = useState("");
+const ForgotPassword = () => {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { signUp } = useAuth();
+  const { resetPassword } = useAuth();
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
-      await signUp(email, password, name);
+      await resetPassword(email);
     } catch (error) {
-      console.error("Registration error:", error);
+      console.error("Reset password error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -34,24 +32,13 @@ const Register = () => {
       <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[calc(100vh-64px)]">
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
+            <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
             <CardDescription>
-              Enter your information to create your account
+              Enter your email and we'll send you a link to reset your password
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleRegister} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input 
-                  id="name" 
-                  type="text" 
-                  placeholder="John Doe" 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
+            <form onSubmit={handleResetPassword} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input 
@@ -63,26 +50,16 @@ const Register = () => {
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input 
-                  id="password" 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Creating account..." : "Create account"}
+                {isLoading ? "Sending..." : "Send reset link"}
               </Button>
             </form>
           </CardContent>
           <CardFooter className="flex justify-center">
             <p className="text-sm text-muted-foreground">
-              Already have an account?{" "}
+              Remember your password?{" "}
               <Link to="/login" className="text-primary hover:underline">
-                Login
+                Return to login
               </Link>
             </p>
           </CardFooter>
@@ -92,4 +69,4 @@ const Register = () => {
   );
 };
 
-export default Register;
+export default ForgotPassword;
