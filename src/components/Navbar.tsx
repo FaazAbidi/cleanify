@@ -2,24 +2,14 @@
 import { Link, useLocation } from "react-router-dom";
 import { ChartBar, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Navbar = () => {
   const location = useLocation();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
 
-  useEffect(() => {
-    // Check if user is logged in
-    const user = localStorage.getItem("user");
-    setIsLoggedIn(!!user);
-  }, [location.pathname]);
-
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    setIsLoggedIn(false);
-    navigate("/login");
+  const handleLogout = async () => {
+    await signOut();
   };
 
   return (
@@ -33,7 +23,7 @@ export const Navbar = () => {
         </div>
         
         <div className="flex items-center space-x-4">
-          {isLoggedIn ? (
+          {user ? (
             <>
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/dashboard">

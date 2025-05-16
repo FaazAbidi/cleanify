@@ -12,9 +12,11 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { useAuth } from "@/hooks/useAuth";
 
 export function AppSidebar({ children }: { children: React.ReactNode }) {
   const location = useLocation();
+  const { user, profile } = useAuth();
   
   // Navigation items for the sidebar
   const navigationItems = [
@@ -67,7 +69,7 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
             <div className="text-sm text-sidebar-foreground">
               <span>Logged in as</span>
               <div className="font-semibold">
-                {JSON.parse(localStorage.getItem("user") || '{"email":""}').email}
+                {profile ? profile.username : user?.email}
               </div>
             </div>
           </SidebarFooter>
