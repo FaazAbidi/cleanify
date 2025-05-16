@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -65,7 +64,7 @@ export default {
 				},
 				data: {
 					blue: '#0EA5E9',
-					green: '#10B981',
+					green: '#09956D',
 					orange: '#F97316',
 					red: '#EF4444',
 					purple: '#8B5CF6',

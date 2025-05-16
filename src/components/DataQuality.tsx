@@ -1,20 +1,39 @@
-
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { DatasetType } from "@/types/dataset";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 interface DataQualityProps {
   dataset: DatasetType;
 }
 
 export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const columnsPerPage = 8;
+  
   const completenessScore = calculateCompletenessScore(dataset);
   const uniquenessScore = calculateUniquenessScore(dataset);
   const consistencyScore = calculateConsistencyScore(dataset);
   const accuracyScore = calculateAccuracyScore(dataset);
   const overallScore = Math.round((completenessScore + uniquenessScore + consistencyScore + accuracyScore) / 4);
+
+  // Filter columns based on search
+  const filteredColumns = dataset.columns.filter((column) =>
+    column.name.toLowerCase().includes(search.toLowerCase())
+  );
+  
+  // Calculate pagination for the filtered columns
+  const totalPages = Math.ceil(filteredColumns.length / columnsPerPage);
+  const startIdx = (page - 1) * columnsPerPage;
+  const displayedColumns = filteredColumns.slice(startIdx, startIdx + columnsPerPage);
+  
+  // Reset to first page when search changes
+  React.useEffect(() => {
+    setPage(1);
+  }, [search]);
 
   return (
     <div className="space-y-6">
@@ -122,26 +141,67 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
           <CardTitle>Data Quality Details</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-6">
-            {dataset.columns.map((column) => (
-              <div key={column.name} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">{column.name}</span>
-                  <span className="text-xs text-gray-500">{column.type}</span>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span>Completeness</span>
-                    <span>{100 - column.missingPercent}%</span>
-                  </div>
-                  <Progress 
-                    value={100 - column.missingPercent} 
-                    className="h-1"
-                  />
-                </div>
-              </div>
-            ))}
+          <div className="relative mb-4">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+            <Input
+              placeholder="Search columns..."
+              className="pl-8"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
+          
+          {displayedColumns.length === 0 ? (
+            <div className="text-center py-4 text-gray-500">
+              No columns found matching "{search}"
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {displayedColumns.map((column) => (
+                <div key={column.name} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{column.name}</span>
+                    <span className="text-xs text-gray-500">{column.type}</span>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span>Completeness</span>
+                      <span>{100 - column.missingPercent}%</span>
+                    </div>
+                    <Progress 
+                      value={100 - column.missingPercent} 
+                      className="h-1"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {totalPages > 1 && (
+            <div className="flex justify-between items-center mt-6">
+              <div className="text-sm text-gray-500">
+                Showing {startIdx + 1} to {Math.min(startIdx + columnsPerPage, filteredColumns.length)} of{" "}
+                {filteredColumns.length} columns
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1 text-sm rounded-md border disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-3 py-1 text-sm rounded-md border disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
