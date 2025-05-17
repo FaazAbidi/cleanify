@@ -13,6 +13,8 @@ const Tasks = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
+
+  console.log(user);
   
   // Use our custom hooks
   const { tasks, loading: tasksLoading, fetchTasks } = useTasks(user?.id);
@@ -34,12 +36,18 @@ const Tasks = () => {
     <AppSidebar>
       <Breadcrumbs items={breadcrumbItems} />
       
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Tasks</h1>
+      {tasksLoading && (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      )}
+      {tasks.length !== 0 && (
+      <div className="flex justify-end items-center mb-6">
         <Button onClick={() => setIsTaskDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-2" /> Create Task
         </Button>
       </div>
+      )}
       
       {tasksLoading ? (
         <div className="flex justify-center items-center h-64">

@@ -24,6 +24,7 @@ export function useTasks(userId: string | undefined) {
       const { data, error } = await supabase
         .from('Tasks')
         .select('*')
+        .eq('user_id', userId)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
