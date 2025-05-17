@@ -41,11 +41,11 @@ export function TaskDetails({
   }
 
   return (
-    <Card className="w-full max-w-full overflow-x-auto">
+    <Card className="w-full">
       <CardHeader>
-        <CardTitle>{task.name}</CardTitle>
+        <CardTitle>Data Exploration</CardTitle>
       </CardHeader>
-      <CardContent className="w-full max-w-full overflow-x-auto">
+      <CardContent className="w-full">
         {loadingData ? (
           <TaskLoadingIndicator progress={progress} />
         ) : dataset ? (
@@ -82,7 +82,8 @@ export function TaskDetails({
                 <CorrelationAnalysis dataset={dataset} />
               </TabsContent>
 
-              <div className="mt-6 overflow-x-auto w-full">
+              <div className="bg-card rounded-lg border p-6 shadow-sm mt-6 w-full">
+                <h2 className="text-lg font-semibold mb-4">Data Table</h2>
                 <DataTable dataset={dataset} />
               </div>
             </div>

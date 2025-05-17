@@ -24,7 +24,7 @@ export const DataTable = ({ dataset }: DataTableProps) => {
   const displayedRows = dataset.rawData.slice(startIdx, startIdx + rowsPerPage);
 
   return (
-    <div className="space-y-4 w-max-full">
+    <div className="space-y-4 w-full">
       <div className="relative">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
         <Input
@@ -36,7 +36,7 @@ export const DataTable = ({ dataset }: DataTableProps) => {
       </div>
 
       {/* Table container with horizontal scroll */}
-      <div className="w-full overflow-x-auto">
+      <div className="w-full">
         <Table>
           <TableHeader>
             <TableRow>

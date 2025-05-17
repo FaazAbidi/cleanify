@@ -25,7 +25,7 @@ const HomePage = () => {
             </div>
             
             <div className="space-y-4">
-              <div className="flex gap-3">
+              <div className="flex gap-3 items-center">
                 <div className="bg-primary/10 p-2 rounded-full">
                   <Database className="h-6 w-6 text-primary" />
                 </div>
@@ -35,7 +35,7 @@ const HomePage = () => {
                 </div>
               </div>
               
-              <div className="flex gap-3">
+              <div className="flex gap-3 items-center">
                 <div className="bg-primary/10 p-2 rounded-full">
                   <ChartPie className="h-6 w-6 text-primary" />
                 </div>
@@ -45,7 +45,7 @@ const HomePage = () => {
                 </div>
               </div>
               
-              <div className="flex gap-3">
+              <div className="flex gap-3 items-center">
                 <div className="bg-primary/10 p-2 rounded-full">
                   <Sparkles className="h-6 w-6 text-primary" />
                 </div>
@@ -71,7 +71,7 @@ const HomePage = () => {
             <div className="relative">
               <div className="absolute -z-10 h-full w-full bg-gradient-to-br from-primary/20 to-primary-foreground/5 rounded-full blur-3xl"></div>
               <img 
-                src="/logo/logo.png" 
+                src="/images/logo-high-res.png" 
                 alt="Cleanify Platform" 
                 className="w-40 h-40 md:w-64 md:h-64 object-contain mx-auto"
               />

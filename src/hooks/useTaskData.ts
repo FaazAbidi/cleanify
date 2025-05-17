@@ -205,8 +205,9 @@ export function useTaskData() {
     
     // Extract the task ID regardless of input format
     const taskId = 'id' in taskOrId ? taskOrId.id : null;
+    const taskIdNumber = typeof taskId === 'string' ? parseInt(taskId) : taskId;
     
-    if (!taskId) return;
+    if (!taskIdNumber) return;
     
     setLoadingTaskData(true);
     setProcessingProgress(0);
@@ -225,7 +226,7 @@ export function useTaskData() {
           supabase
             .from('Tasks')
             .select('*')
-            .eq('id', taskId)
+            .eq('id', taskIdNumber)
             .single()
         );
           
