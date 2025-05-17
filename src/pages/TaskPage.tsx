@@ -64,7 +64,7 @@ const TaskPage = () => {
 
   return (
     <AppSidebar>
-      <div className="w-full overflow-hidden">
+      <div className="w-full">
         <Breadcrumbs items={breadcrumbItems} />
         
         <div className="flex justify-between items-center mb-6">
@@ -81,8 +81,7 @@ const TaskPage = () => {
           </div>
         </div>
         
-        <div className="bg-card rounded-lg border p-6 shadow-sm">
-          <div className="w-full overflow-x-auto">
+          <div className="w-full">
             {taskLoading ? (
               <div className="flex justify-center items-center h-64">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -102,7 +101,6 @@ const TaskPage = () => {
             )}
           </div>
         </div>
-      </div>
     </AppSidebar>
   );
 };

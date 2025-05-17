@@ -16,6 +16,7 @@ import TaskPage from "./pages/TaskPage";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PublicRoute from "./components/PublicRoute";
 import { AuthProvider } from "./hooks/useAuth";
 
 const queryClient = new QueryClient();
@@ -29,13 +30,34 @@ const App = () => (
         <AuthProvider>
           <Routes>
             {/* Public routes */}
-            <Route path="/" element={<HomePage />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/verify-email" element={<VerifyEmail />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route
+              path="/"
+              element={<PublicRoute><HomePage /></PublicRoute>}
+            />
+            <Route
+              path="/login"
+              element={<PublicRoute><Login /></PublicRoute>}
+            />
+            <Route
+              path="/register"
+              element={<PublicRoute><Register /></PublicRoute>}
+            />
+            <Route
+              path="/forgot-password"
+              element={<PublicRoute><ForgotPassword /></PublicRoute>}
+            />
+            <Route
+              path="/reset-password"
+              element={<PublicRoute><ResetPassword /></PublicRoute>}
+            />
+            <Route
+              path="/verify-email"
+              element={<PublicRoute><VerifyEmail /></PublicRoute>}
+            />
+            <Route 
+              path="/auth/callback" 
+              element={<PublicRoute><AuthCallback /></PublicRoute>} 
+            />
             
             {/* Protected routes */}
             <Route 
