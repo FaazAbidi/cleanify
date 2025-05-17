@@ -50,7 +50,9 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
           <SidebarContent>
             <SidebarMenu>
               {navigationItems.map((item) => (
-                <SidebarMenuItem key={item.name}>
+                <SidebarMenuItem 
+                key={item.name} 
+                className="w-full rounded-md hover:bg-sidebar-accent p-2 border-b border-sidebar-border bg-white">
                   <SidebarMenuButton 
                     asChild 
                     isActive={location.pathname === item.href}

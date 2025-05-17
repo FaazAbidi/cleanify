@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { DatasetType } from "@/types/dataset";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -25,7 +24,7 @@ export const DataTable = ({ dataset }: DataTableProps) => {
   const displayedRows = dataset.rawData.slice(startIdx, startIdx + rowsPerPage);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-max-full">
       <div className="relative">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
         <Input
@@ -36,12 +35,15 @@ export const DataTable = ({ dataset }: DataTableProps) => {
         />
       </div>
 
-      <div className="rounded-md border overflow-x-auto">
+      {/* Table container with horizontal scroll */}
+      <div className="w-full overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               {filteredColumns.map((column, idx) => (
-                <TableHead key={idx}>{column}</TableHead>
+                <TableHead key={idx} className="whitespace-nowrap" >
+                  {column}
+                </TableHead>
               ))}
             </TableRow>
           </TableHeader>
@@ -51,7 +53,14 @@ export const DataTable = ({ dataset }: DataTableProps) => {
                 {filteredColumns.map((column, colIdx) => {
                   const actualColIdx = dataset.columnNames.findIndex(col => col === column);
                   const cellValue = row[actualColIdx] || '-';
-                  return <TableCell key={colIdx}>{String(cellValue)}</TableCell>;
+                  return (
+                    <TableCell 
+                      key={colIdx} 
+                      className="whitespace-nowrap text-ellipsis"
+                    >
+                      {String(cellValue)}
+                    </TableCell>
+                  );
                 })}
               </TableRow>
             ))}
@@ -60,7 +69,7 @@ export const DataTable = ({ dataset }: DataTableProps) => {
       </div>
 
       {totalPages > 1 && (
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
           <div className="text-sm text-gray-500">
             Showing {startIdx + 1} to {Math.min(startIdx + rowsPerPage, dataset.rawData.length)} of{" "}
             {dataset.rawData.length} rows
