@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -61,17 +60,45 @@ export const CreateTaskDialog = ({ open, onOpenChange, onTaskCreated }: CreateTa
     setUploading(true);
     
     try {
-      // 1. Create the task in the database first
+      // 1. Upload the raw data file to Supabase Storage
+      const filePath = `${user.id}/${Date.now()}/${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('raw-data')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+      
+      if (uploadError) throw uploadError;
+      
+      // 2. Create a file record in the Files table
+      const { data: fileData, error: fileError } = await supabase
+        .from('Files')
+        .insert([{
+          created_at: new Date().toISOString(),
+          modified_at: new Date().toISOString(),
+          path: filePath,
+          file_name: file.name,
+          file_size: parseFloat((file.size / 1048576).toFixed(2)) // Size in MB
+        }])
+        .select('id')
+        .single();
+      
+      if (fileError) throw fileError;
+      
+      if (!fileData || !fileData.id) {
+        throw new Error("Failed to create file record");
+      }
+      
+      // 3. Create the task in the database with the file reference
       const { data: taskData, error: taskError } = await supabase
-        .from('tasks')
+        .from('Tasks')
         .insert([
           { 
             name: taskName, 
             user_id: user.id,
-            status: 'pending',
-            category: 1, // Default category ID
-            methods: [1], // Default method ID
-            raw_data: 1 // This will be updated after file upload
+            status: 'RAW',
+            raw_data: fileData.id // Use the file ID as the reference
           }
         ])
         .select('id')
@@ -83,34 +110,11 @@ export const CreateTaskDialog = ({ open, onOpenChange, onTaskCreated }: CreateTa
         throw new Error("Failed to create task");
       }
       
-      const taskId = taskData.id;
-      
-      // 2. Upload the raw data file to Supabase Storage
-      const filePath = `${user.id}/${taskId}/raw_data.csv`;
-      const { error: uploadError } = await supabase.storage
-        .from('task_data')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
-      
-      if (uploadError) throw uploadError;
-      
-      // 3. Get the file URL
-      const { data: fileUrlData } = await supabase.storage
-        .from('task_data')
-        .getPublicUrl(filePath);
-      
-      const fileUrl = fileUrlData.publicUrl;
-      
-      // 4. Update the task with the file reference
+      // 4. Update the task status to completed
       const { error: updateError } = await supabase
-        .from('tasks')
-        .update({ 
-          status: 'completed',
-          raw_data_url: fileUrl 
-        })
-        .eq('id', taskId);
+        .from('Tasks')
+        .update({ status: 'PROCESSED' })
+        .eq('id', taskData.id);
       
       if (updateError) throw updateError;
       
@@ -178,7 +182,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, onTaskCreated }: CreateTa
                 </div>
                 {file && (
                   <p className="text-sm text-gray-500 mt-1">
-                    Selected: {file.name} ({(file.size / 1024).toFixed(2)} KB)
+                    Selected: {file.name} ({(file.size / 1048576).toFixed(2)} MB)
                   </p>
                 )}
               </div>
