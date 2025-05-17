@@ -4,17 +4,24 @@ import {
   ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, 
   Tooltip, ResponsiveContainer, Cell, Legend
 } from "recharts";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { select } from "d3-selection";
+import { scaleLinear, scaleBand } from "d3-scale";
+import { axisBottom, axisLeft } from "d3-axis";
+import { interpolateRdBu } from "d3-scale-chromatic";
 
 interface CorrelationAnalysisProps {
   dataset: DatasetType;
 }
 
 export const CorrelationAnalysis = ({ dataset }: CorrelationAnalysisProps) => {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const { matrix, labels } = dataset.correlationData;
+
   const numericColumns = dataset.columns.filter((col) => col.type === "numeric");
   
   const [xColumn, setXColumn] = useState<string>(
@@ -251,191 +258,126 @@ export const CorrelationAnalysis = ({ dataset }: CorrelationAnalysisProps) => {
     }
   };
 
+  useEffect(() => {
+    if (!svgRef.current || !matrix.length || !labels.length) return;
+
+    // Clear previous visualization
+    select(svgRef.current).selectAll("*").remove();
+
+    const margin = { top: 50, right: 30, bottom: 120, left: 120 };
+    // Make the dimensions responsive - calculate based on container width
+    const containerWidth = svgRef.current.parentElement?.clientWidth || 600;
+    // Ensure width is not more than container width
+    const width = Math.min(containerWidth - margin.left - margin.right, 800);
+    // Make height proportional to width
+    const height = Math.min(width, 800);
+
+    // Create scales
+    const x = scaleBand()
+      .domain(labels)
+      .range([0, width])
+      .padding(0.05);
+
+    const y = scaleBand()
+      .domain(labels)
+      .range([0, height])
+      .padding(0.05);
+
+    const color = scaleLinear<string>()
+      .domain([-1, 0, 1])
+      .range([interpolateRdBu(0), interpolateRdBu(0.5), interpolateRdBu(1)]);
+
+    // Create SVG
+    const svg = select(svgRef.current)
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    // Add X axis
+    svg.append("g")
+      .attr("transform", `translate(0,${height})`)
+      .call(axisBottom(x))
+      .selectAll("text")
+      .attr("transform", "rotate(-45)")
+      .style("text-anchor", "end")
+      .attr("dx", "-.8em")
+      .attr("dy", ".15em");
+
+    // Add Y axis
+    svg.append("g")
+      .call(axisLeft(y));
+
+    // Add correlation matrix cells
+    for (let i = 0; i < labels.length; i++) {
+      for (let j = 0; j < labels.length; j++) {
+        svg.append("rect")
+          .attr("x", x(labels[j]) || 0)
+          .attr("y", y(labels[i]) || 0)
+          .attr("width", x.bandwidth())
+          .attr("height", y.bandwidth())
+          .style("fill", color(matrix[i][j]));
+
+        // Only add text if the rectangle is big enough
+        if (x.bandwidth() > 25 && y.bandwidth() > 25) {
+          svg.append("text")
+            .attr("x", (x(labels[j]) || 0) + x.bandwidth() / 2)
+            .attr("y", (y(labels[i]) || 0) + y.bandwidth() / 2)
+            .attr("text-anchor", "middle")
+            .attr("dominant-baseline", "middle")
+            .style("font-size", "10px")
+            .style("fill", Math.abs(matrix[i][j]) > 0.5 ? "#ffffff" : "#000000")
+            .text(matrix[i][j].toFixed(2));
+        }
+      }
+    }
+
+    // Add title
+    svg.append("text")
+      .attr("x", width / 2)
+      .attr("y", -20)
+      .attr("text-anchor", "middle")
+      .style("font-size", "16px")
+      .style("font-weight", "bold")
+      .text("Correlation Heatmap");
+
+  }, [matrix, labels]);
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <Card className="md:col-span-2">
+    <div className="space-y-6 w-full overflow-hidden">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Scatter Plot Analysis</CardTitle>
+          <CardTitle>Correlation Analysis</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row md:items-end gap-4 mb-4">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">X Axis</label>
-              <Select
-                value={xColumn}
-                onValueChange={setXColumn}
-                disabled={numericColumns.length === 0}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select X column" />
-                </SelectTrigger>
-                <SelectContent>
-                  {numericColumns.map((col) => (
-                    <SelectItem key={`x-${col.name}`} value={col.name}>
-                      {col.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Y Axis</label>
-              <Select
-                value={yColumn}
-                onValueChange={setYColumn}
-                disabled={numericColumns.length === 0}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Y column" />
-                </SelectTrigger>
-                <SelectContent>
-                  {numericColumns.map((col) => (
-                    <SelectItem key={`y-${col.name}`} value={col.name}>
-                      {col.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {correlation !== null && (
-              <div className="px-4 py-2">
-                <Badge 
-                  className="text-white" 
-                  style={{ backgroundColor: getCorrelationColor(correlation) }}
-                >
-                  Correlation: {correlation.toFixed(2)} ({getCorrelationDescription(correlation)})
-                </Badge>
-              </div>
-            )}
-          </div>
-          
-          <div className="h-80">
-            {scatterData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 30 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    type="number" 
-                    dataKey="x" 
-                    name={xColumn} 
-                    label={{ value: xColumn, position: 'bottom', offset: 5 }} 
-                  />
-                  <YAxis 
-                    type="number" 
-                    dataKey="y" 
-                    name={yColumn} 
-                    label={{ value: yColumn, angle: -90, position: 'left', offset: 10 }} 
-                  />
-                  <Tooltip 
-                    cursor={{ strokeDasharray: '3 3' }}
-                    formatter={(value, name) => [value, name === 'x' ? xColumn : yColumn]}
-                  />
-                  <Scatter name="Values" data={scatterData} fill="#0EA5E9">
-                    <Cell fill={correlation ? getCorrelationColor(correlation) : "#0EA5E9"} />
-                  </Scatter>
-                </ScatterChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-gray-500">
-                {numericColumns.length < 2
-                  ? "Insufficient numeric columns for scatter plot"
-                  : "Select two columns to visualize correlation"}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card className="md:col-span-2">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-lg">Top Correlations</CardTitle>
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Switch 
-                id="target-filter"
-                checked={filterByTargetColumn}
-                onCheckedChange={handleFilterChange}
-                disabled={!numericColumns.length}
-              />
-              <Label htmlFor="target-filter">Filter by target</Label>
-            </div>
-            
-            {filterByTargetColumn && (
-              <Select
-                value={targetColumn}
-                onValueChange={setTargetColumn}
-                disabled={correlatedNumericColumns.length === 0}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select target column" />
-                </SelectTrigger>
-                <SelectContent>
-                  {correlatedNumericColumns.map((col) => (
-                    <SelectItem key={`target-${col.name}`} value={col.name}>
-                      {col.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          {heatmapData.length > 0 ? (
-            <div className="space-y-4">
-              {filterByTargetColumn && targetColumn && (
-                <div className="text-sm text-gray-500 italic">
-                  Showing all correlations for {targetColumn}, sorted by strength.
-                </div>
-              )}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {heatmapData.slice(0, 10).map((item, index) => (
-                  <div 
-                    key={`heatmap-${index}`} 
-                    className="flex items-center justify-between p-3 rounded-md"
-                    style={{ backgroundColor: `${getCorrelationColor(item.value)}20` }}
-                  >
-                    <div>
-                      <div className="font-medium">
-                        {item.x} vs {item.y}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {getCorrelationDescription(item.value)}
-                      </div>
-                    </div>
-                    <Badge 
-                      className="text-white" 
-                      style={{ backgroundColor: getCorrelationColor(item.value) }}
-                    >
-                      {item.value.toFixed(2)}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
+        <CardContent className="overflow-auto w-full">
+          {matrix.length > 0 ? (
+            <div className="flex justify-center w-full overflow-auto">
+              <svg ref={svgRef} className="w-full" preserveAspectRatio="xMinYMin meet"></svg>
             </div>
           ) : (
-            <div className="h-40 flex flex-col items-center justify-center text-gray-500 space-y-2">
-              <div>{correlationMessage}</div>
-              
-              {filterByTargetColumn && targetColumn && !targetInLabels && (
-                <div className="text-sm text-amber-600">
-                  The column "{targetColumn}" may not be included in correlation calculations.
-                  Check console for debugging information.
-                </div>
-              )}
-              
-              {filterByTargetColumn && targetColumn && (
-                <button 
-                  className="mt-2 px-4 py-2 text-sm bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100"
-                  onClick={() => setFilterByTargetColumn(false)}
-                >
-                  Show all correlations instead
-                </button>
-              )}
+            <div className="py-10 text-center">
+              <p className="text-muted-foreground">No numeric data available for correlation analysis</p>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Understanding Correlations</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="mb-4">
+            Correlation values range from -1 to 1:
+          </p>
+          <ul className="list-disc pl-5 space-y-2">
+            <li><strong>1.0:</strong> Perfect positive correlation (as one variable increases, the other increases proportionally)</li>
+            <li><strong>0.0:</strong> No correlation (variables appear unrelated)</li>
+            <li><strong>-1.0:</strong> Perfect negative correlation (as one variable increases, the other decreases proportionally)</li>
+          </ul>
+          <p className="mt-4">
+            Generally, correlation values above 0.7 or below -0.7 indicate strong relationships, while values between -0.3 and 0.3 suggest weak or no relationship.
+          </p>
         </CardContent>
       </Card>
     </div>

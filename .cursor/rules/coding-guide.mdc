@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# MAKE SURE TO WRITE MODULAR CODE AND REUSE EXISTING COMPONENTS OR THEME. Don't write all the code in one file. You may create subcomponents, hooks, types etc.

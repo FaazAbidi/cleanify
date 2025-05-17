@@ -7,6 +7,31 @@ export type Json =
   | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          operationName?: string
+          query?: string
+          variables?: Json
+          extensions?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       Categories: {
@@ -69,18 +94,24 @@ export type Database = {
       Files: {
         Row: {
           created_at: string
+          file_name: string
+          file_size: number | null
           id: number
           modified_at: string | null
           path: string
         }
         Insert: {
           created_at?: string
+          file_name: string
+          file_size?: number | null
           id?: number
           modified_at?: string | null
           path: string
         }
         Update: {
           created_at?: string
+          file_name?: string
+          file_size?: number | null
           id?: number
           modified_at?: string | null
           path?: string
@@ -173,10 +204,9 @@ export type Database = {
       }
       Tasks: {
         Row: {
-          category: number
+          category: number | null
           created_at: string
           id: number
-          methods: number[]
           modified_at: string
           name: string
           processed_data: number | null
@@ -185,10 +215,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          category: number
+          category?: number | null
           created_at?: string
           id?: number
-          methods: number[]
           modified_at?: string
           name: string
           processed_data?: number | null
@@ -197,10 +226,9 @@ export type Database = {
           user_id?: string
         }
         Update: {
-          category?: number
+          category?: number | null
           created_at?: string
           id?: number
-          methods?: number[]
           modified_at?: string
           name?: string
           processed_data?: number | null
@@ -247,7 +275,7 @@ export type Database = {
     Enums: {
       category: "cat_1" | "cat_2" | "cat_3"
       method: "method_1" | "method_2" | "method_3"
-      status: "RUNNING" | "RAW" | "PROCESSED"
+      status: "RUNNING" | "RAW" | "PROCESSED" | "FAILED"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -361,11 +389,14 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       category: ["cat_1", "cat_2", "cat_3"],
       method: ["method_1", "method_2", "method_3"],
-      status: ["RUNNING", "RAW", "PROCESSED"],
+      status: ["RUNNING", "RAW", "PROCESSED", "FAILED"],
     },
   },
 } as const
