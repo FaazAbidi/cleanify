@@ -54,7 +54,7 @@ export const ColumnAnalysis = ({ dataset }: ColumnAnalysisProps) => {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#83a6ed', '#8dd1e1', '#82ca9d', '#a4de6c', '#d0ed57'];
 
   const renderColumnList = () => (
-    <div className="space-y-1.5 mt-4 max-h-64 overflow-y-auto">
+    <div className="space-y-1.5 mt-4 max-h-[500px] overflow-y-auto">
       {filteredColumns.map((column) => (
         <div
           key={column.name}

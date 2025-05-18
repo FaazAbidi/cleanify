@@ -1,9 +1,9 @@
-
 import { DatasetType } from "@/types/dataset";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { ChartBarBig, FileText, AlertTriangle, TableProperties } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { formatBytes } from "@/lib/format";
 
 interface DataOverviewProps {
   dataset: DatasetType;
@@ -69,7 +69,7 @@ export const DataOverview = ({ dataset }: DataOverviewProps) => {
             <div className="flex justify-between items-center pb-2 border-b">
               <span className="font-medium">Memory Usage (est.)</span>
               <span className="text-gray-700">
-                {Math.round(dataset.rows * dataset.columns.length * 8 / 1024 / 1024)} MB
+                {formatBytes(dataset.rows * dataset.columns.length * 8)}
               </span>
             </div>
             
