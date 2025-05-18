@@ -1,15 +1,17 @@
 import { DatasetType } from "@/types/dataset";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { ChartBarBig, FileText, AlertTriangle, TableProperties } from "lucide-react";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ScatterChart, Scatter, ZAxis } from "recharts";
+import { ChartBarBig, FileText, AlertTriangle, TableProperties, TrendingUp, Target, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatBytes } from "@/lib/format";
+import { getCorrelationColor } from "@/lib/correlation-utils";
 
 interface DataOverviewProps {
   dataset: DatasetType;
+  onSelectColumn?: (columnName: string) => void;
 }
 
-export const DataOverview = ({ dataset }: DataOverviewProps) => {
+export const DataOverview = ({ dataset, onSelectColumn }: DataOverviewProps) => {
   const dataTypeColors = {
     numeric: "#0EA5E9", // Blue
     categorical: "#10B981", // Green
@@ -161,6 +163,122 @@ export const DataOverview = ({ dataset }: DataOverviewProps) => {
           </div>
         </CardContent>
       </Card>
+
+      <MissingValuesOverview dataset={dataset} onSelectColumn={onSelectColumn} />
+      <OutlierSummary dataset={dataset} onSelectColumn={onSelectColumn} />
     </div>
+  );
+};
+
+// 2. Top Correlations Preview
+const MissingValuesOverview = ({ dataset, onSelectColumn }: { 
+  dataset: DatasetType;
+  onSelectColumn?: (columnName: string) => void;
+}) => {
+  // Get columns with missing values
+  const columnsWithMissingValues = dataset.columns
+    .filter(col => col.missingValues > 0)
+    .sort((a, b) => b.missingValues - a.missingValues)
+    .slice(0, 5);
+  
+  if (columnsWithMissingValues.length === 0) return null;
+  
+  const handleColumnClick = (columnName: string) => {
+    if (onSelectColumn) {
+      onSelectColumn(columnName);
+      
+      // Scroll to the data table
+      const dataTableElement = document.getElementById('data-table-section');
+      if (dataTableElement) {
+        dataTableElement.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Top Columns with Missing Values</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {columnsWithMissingValues.map((column, index) => (
+            <div 
+              key={`missing-${index}`} 
+              className="flex justify-between items-center p-2 rounded-md bg-amber-50 dark:bg-amber-950/20 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/20 transition-colors"
+              onClick={() => handleColumnClick(column.name)}
+              title="Click to view this column in the data table"
+            >
+              <div className="flex items-center">
+                <AlertTriangle className="h-4 w-4 mr-2 text-amber-500" />
+                <span className="font-medium">{column.name}</span>
+              </div>
+              <Badge variant="outline" className="ml-auto">
+                {column.missingValues.toLocaleString()} ({column.missingPercent.toFixed(1)}%)
+              </Badge>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// 4. Outlier Detection Summary
+const OutlierSummary = ({ dataset, onSelectColumn }: { 
+  dataset: DatasetType; 
+  onSelectColumn?: (columnName: string) => void;
+}) => {
+  const columnsWithOutliers = dataset.columns
+    .filter(col => col.outliers && col.outliers > 0)
+    .sort((a, b) => (b.outliers || 0) - (a.outliers || 0))
+    .slice(0, 5);
+  
+  if (columnsWithOutliers.length === 0) return null;
+  
+  const outlierData = columnsWithOutliers.map(col => ({
+    name: col.name,
+    value: col.outliers || 0,
+    percent: ((col.outliers || 0) / dataset.rows * 100).toFixed(1)
+  }));
+  
+  const handleColumnClick = (columnName: string) => {
+    if (onSelectColumn) {
+      onSelectColumn(columnName);
+      
+      // Scroll to the data table
+      const dataTableElement = document.getElementById('data-table-section');
+      if (dataTableElement) {
+        dataTableElement.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Columns with Most Outliers</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {outlierData.map((item, index) => (
+            <div 
+              key={`outlier-${index}`} 
+              className="flex items-center justify-between p-2 rounded-md bg-amber-50 dark:bg-amber-950/20 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/20 transition-colors"
+              onClick={() => handleColumnClick(item.name)}
+              title="Click to view this column in the data table"
+            >
+              <div className="flex items-center">
+                <AlertTriangle className="h-4 w-4 mr-2 text-amber-500" />
+                <span className="font-medium">{item.name}</span>
+              </div>
+              <Badge variant="outline" className="ml-auto">
+                {item.value} ({item.percent}%)
+              </Badge>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 };

@@ -1,19 +1,51 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DatasetType } from "@/types/dataset";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Search, Pin, PinOff } from "lucide-react";
+import { Search, Pin, PinOff, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 interface DataTableProps {
   dataset: DatasetType;
+  highlightColumn?: string | null;
 }
 
-export const DataTable = ({ dataset }: DataTableProps) => {
+export const DataTable = ({ dataset, highlightColumn }: DataTableProps) => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pinnedColumns, setPinnedColumns] = useState<string[]>([]);
+  const [activeHighlight, setActiveHighlight] = useState<string | null>(null);
   const rowsPerPage = 10;
+
+  // Effect to handle highlighting column
+  useEffect(() => {
+    if (highlightColumn) {
+      // Pin the column if not already pinned
+      if (!pinnedColumns.includes(highlightColumn)) {
+        setPinnedColumns([...pinnedColumns, highlightColumn]);
+      }
+      
+      // Set search to focus on this column
+      setSearch(highlightColumn);
+      
+      // Reset page to 1
+      setPage(1);
+      
+      // Track the highlighted column
+      setActiveHighlight(highlightColumn);
+    }
+  }, [highlightColumn]);
+  
+  // Reset highlighting and filtering
+  const resetHighlighting = () => {
+    setActiveHighlight(null);
+    setSearch("");
+    // Optionally unpin the column too
+    if (activeHighlight && pinnedColumns.includes(activeHighlight)) {
+      setPinnedColumns(pinnedColumns.filter(col => col !== activeHighlight));
+    }
+  };
 
   // Filter columns based on search
   const filteredColumns = dataset.columnNames.filter((col) =>
@@ -39,14 +71,35 @@ export const DataTable = ({ dataset }: DataTableProps) => {
 
   return (
     <div className="space-y-4 w-full">
-      <div className="relative">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-        <Input
-          placeholder="Search columns..."
-          className="pl-8"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+          <Input
+            placeholder="Search columns..."
+            className="pl-8"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search && (
+            <button 
+              className="absolute right-2.5 top-2.5 h-4 w-4 text-gray-500 hover:text-gray-700"
+              onClick={() => setSearch("")}
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+        
+        {activeHighlight && (
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={resetHighlighting}
+            className="whitespace-nowrap"
+          >
+            Clear Highlight
+          </Button>
+        )}
       </div>
 
       {/* Table container with horizontal scroll and sticky header */}
@@ -60,7 +113,8 @@ export const DataTable = ({ dataset }: DataTableProps) => {
                   key={`pinned-${idx}`} 
                   className={cn(
                     "whitespace-nowrap sticky left-0 z-20 bg-background shadow-[1px_0_0_0_rgba(0,0,0,0.1)]",
-                    idx > 0 && `left-[${idx * 150}px]`
+                    idx > 0 && `left-[${idx * 150}px]`,
+                    column === activeHighlight && "bg-amber-50 dark:bg-amber-900/20"
                   )}
                   style={{ 
                     minWidth: "150px",
@@ -83,7 +137,10 @@ export const DataTable = ({ dataset }: DataTableProps) => {
               {unpinnedFilteredColumns.map((column, idx) => (
                 <TableHead 
                   key={`unpinned-${idx}`} 
-                  className="whitespace-nowrap min-w-[150px]"
+                  className={cn(
+                    "whitespace-nowrap min-w-[150px]",
+                    column === activeHighlight && "bg-amber-50 dark:bg-amber-900/20"
+                  )}
                 >
                   <div className="flex items-center gap-1.5">
                     <span>{column}</span>
@@ -110,7 +167,8 @@ export const DataTable = ({ dataset }: DataTableProps) => {
                       key={`pinned-${colIdx}`} 
                       className={cn(
                         "whitespace-nowrap text-ellipsis sticky left-0 bg-background shadow-[1px_0_0_0_rgba(0,0,0,0.1)]",
-                        colIdx > 0 && `left-[${colIdx * 150}px]`
+                        colIdx > 0 && `left-[${colIdx * 150}px]`,
+                        column === activeHighlight && "bg-amber-50/40 dark:bg-amber-900/10"
                       )}
                       style={{ 
                         minWidth: "150px",
@@ -129,7 +187,10 @@ export const DataTable = ({ dataset }: DataTableProps) => {
                   return (
                     <TableCell 
                       key={`unpinned-${colIdx}`} 
-                      className="whitespace-nowrap text-ellipsis min-w-[150px]"
+                      className={cn(
+                        "whitespace-nowrap text-ellipsis min-w-[150px]",
+                        column === activeHighlight && "bg-amber-50/40 dark:bg-amber-900/10"
+                      )}
                     >
                       {String(cellValue)}
                     </TableCell>
