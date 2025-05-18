@@ -5,7 +5,6 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
 import { getCorrelationColor, getCorrelationDescription } from "@/lib/correlation-utils";
 
 interface FeatureCorrelationScatterProps {

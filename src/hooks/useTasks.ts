@@ -26,6 +26,8 @@ export function useTasks(userId: string | undefined) {
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
+
+      console.log(data);
       
       if (error) throw error;
       
