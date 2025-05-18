@@ -9,6 +9,9 @@ import { CorrelationAnalysis } from "@/components/CorrelationAnalysis";
 import { DataTypeManager } from "@/components/DataTypeManager";
 import { DataTable } from "@/components/DataTable";
 import { TaskLoadingIndicator } from "./TaskLoadingIndicator";
+import { TaskVersion } from "@/types/version";
+import { Badge } from "./ui/badge";
+import { formatBytes } from "@/lib/format";
 
 interface TaskDetailsProps {
   task: Tables<'Tasks'> | null;
@@ -16,6 +19,7 @@ interface TaskDetailsProps {
   loadingData: boolean;
   progress: number;
   onDatasetUpdate: (dataset: DatasetType) => void;
+  selectedVersion?: TaskVersion | null;
 }
 
 export function TaskDetails({ 
@@ -23,7 +27,8 @@ export function TaskDetails({
   dataset, 
   loadingData, 
   progress, 
-  onDatasetUpdate 
+  onDatasetUpdate,
+  selectedVersion
 }: TaskDetailsProps) {
   if (!task) {
     return (
@@ -43,7 +48,21 @@ export function TaskDetails({
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>Data Exploration</CardTitle>
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+          <CardTitle>Data Exploration</CardTitle>
+          {selectedVersion?.file && (
+            <div className="flex items-center space-x-2">
+              <Badge variant="outline" className="px-2 py-1">
+                {selectedVersion.file.file_name}
+              </Badge>
+              {selectedVersion.file.file_size && (
+                <Badge variant="secondary" className="px-2 py-1">
+                  {formatBytes(selectedVersion.file.file_size)}
+                </Badge>
+              )}
+            </div>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="w-full">
         {loadingData ? (
@@ -96,4 +115,4 @@ export function TaskDetails({
       </CardContent>
     </Card>
   );
-} 
+}

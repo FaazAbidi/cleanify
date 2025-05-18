@@ -171,18 +171,30 @@ export type Database = {
           created_at: string
           id: number
           method_id: number | null
+          name: string
+          prev_version: number | null
+          processed_file: number | null
+          status: Database["public"]["Enums"]["status"]
           task_id: number | null
         }
         Insert: {
           created_at?: string
           id?: number
           method_id?: number | null
+          name: string
+          prev_version?: number | null
+          processed_file?: number | null
+          status: Database["public"]["Enums"]["status"]
           task_id?: number | null
         }
         Update: {
           created_at?: string
           id?: number
           method_id?: number | null
+          name?: string
+          prev_version?: number | null
+          processed_file?: number | null
+          status?: Database["public"]["Enums"]["status"]
           task_id?: number | null
         }
         Relationships: [
@@ -191,6 +203,20 @@ export type Database = {
             columns: ["method_id"]
             isOneToOne: false
             referencedRelation: "Methods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "TaskMethods_prev_version_fkey"
+            columns: ["prev_version"]
+            isOneToOne: false
+            referencedRelation: "TaskMethods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "TaskMethods_processed_file_fkey"
+            columns: ["processed_file"]
+            isOneToOne: false
+            referencedRelation: "Files"
             referencedColumns: ["id"]
           },
           {
@@ -256,6 +282,13 @@ export type Database = {
             columns: ["raw_data"]
             isOneToOne: false
             referencedRelation: "Files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "Tasks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

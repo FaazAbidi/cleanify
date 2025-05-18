@@ -2,7 +2,8 @@ import { useState } from "react";
 import { DatasetType } from "@/types/dataset";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, Pin, PinOff } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface DataTableProps {
   dataset: DatasetType;
@@ -11,6 +12,7 @@ interface DataTableProps {
 export const DataTable = ({ dataset }: DataTableProps) => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [pinnedColumns, setPinnedColumns] = useState<string[]>([]);
   const rowsPerPage = 10;
 
   // Filter columns based on search
@@ -18,10 +20,22 @@ export const DataTable = ({ dataset }: DataTableProps) => {
     col.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Split columns into pinned and unpinned
+  const pinnedFilteredColumns = filteredColumns.filter(col => pinnedColumns.includes(col));
+  const unpinnedFilteredColumns = filteredColumns.filter(col => !pinnedColumns.includes(col));
+  
   // Calculate pagination
   const totalPages = Math.ceil(dataset.rawData.length / rowsPerPage);
   const startIdx = (page - 1) * rowsPerPage;
   const displayedRows = dataset.rawData.slice(startIdx, startIdx + rowsPerPage);
+
+  const togglePinColumn = (column: string) => {
+    if (pinnedColumns.includes(column)) {
+      setPinnedColumns(pinnedColumns.filter(col => col !== column));
+    } else {
+      setPinnedColumns([...pinnedColumns, column]);
+    }
+  };
 
   return (
     <div className="space-y-4 w-full">
@@ -35,14 +49,51 @@ export const DataTable = ({ dataset }: DataTableProps) => {
         />
       </div>
 
-      {/* Table container with horizontal scroll */}
-      <div className="w-full">
+      {/* Table container with horizontal scroll and sticky header */}
+      <div className="w-full overflow-x-auto relative border rounded-md">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 z-10 bg-background">
             <TableRow>
-              {filteredColumns.map((column, idx) => (
-                <TableHead key={idx} className="whitespace-nowrap" >
-                  {column}
+              {/* Pinned columns */}
+              {pinnedFilteredColumns.map((column, idx) => (
+                <TableHead 
+                  key={`pinned-${idx}`} 
+                  className={cn(
+                    "whitespace-nowrap sticky left-0 z-20 bg-background shadow-[1px_0_0_0_rgba(0,0,0,0.1)]",
+                    idx > 0 && `left-[${idx * 150}px]`
+                  )}
+                  style={{ 
+                    minWidth: "150px",
+                    left: idx > 0 ? `${idx * 150}px` : 0
+                  }}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>{column}</span>
+                    <button
+                      onClick={() => togglePinColumn(column)}
+                      className="p-1 rounded-full hover:bg-muted"
+                    >
+                      <PinOff size={14} />
+                    </button>
+                  </div>
+                </TableHead>
+              ))}
+              
+              {/* Unpinned columns */}
+              {unpinnedFilteredColumns.map((column, idx) => (
+                <TableHead 
+                  key={`unpinned-${idx}`} 
+                  className="whitespace-nowrap min-w-[150px]"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>{column}</span>
+                    <button
+                      onClick={() => togglePinColumn(column)}
+                      className="p-1 rounded-full hover:bg-muted"
+                    >
+                      <Pin size={14} />
+                    </button>
+                  </div>
                 </TableHead>
               ))}
             </TableRow>
@@ -50,13 +101,35 @@ export const DataTable = ({ dataset }: DataTableProps) => {
           <TableBody>
             {displayedRows.map((row, rowIdx) => (
               <TableRow key={rowIdx}>
-                {filteredColumns.map((column, colIdx) => {
+                {/* Pinned columns */}
+                {pinnedFilteredColumns.map((column, colIdx) => {
                   const actualColIdx = dataset.columnNames.findIndex(col => col === column);
                   const cellValue = row[actualColIdx] || '-';
                   return (
                     <TableCell 
-                      key={colIdx} 
-                      className="whitespace-nowrap text-ellipsis"
+                      key={`pinned-${colIdx}`} 
+                      className={cn(
+                        "whitespace-nowrap text-ellipsis sticky left-0 bg-background shadow-[1px_0_0_0_rgba(0,0,0,0.1)]",
+                        colIdx > 0 && `left-[${colIdx * 150}px]`
+                      )}
+                      style={{ 
+                        minWidth: "150px",
+                        left: colIdx > 0 ? `${colIdx * 150}px` : 0
+                      }}
+                    >
+                      {String(cellValue)}
+                    </TableCell>
+                  );
+                })}
+                
+                {/* Unpinned columns */}
+                {unpinnedFilteredColumns.map((column, colIdx) => {
+                  const actualColIdx = dataset.columnNames.findIndex(col => col === column);
+                  const cellValue = row[actualColIdx] || '-';
+                  return (
+                    <TableCell 
+                      key={`unpinned-${colIdx}`} 
+                      className="whitespace-nowrap text-ellipsis min-w-[150px]"
                     >
                       {String(cellValue)}
                     </TableCell>

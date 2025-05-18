@@ -79,7 +79,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, onTaskCreated }: CreateTa
           modified_at: new Date().toISOString(),
           path: filePath,
           file_name: file.name,
-          file_size: parseFloat((file.size / 1048576).toFixed(2)) // Size in MB
+          file_size: file.size // Size in bytes
         }])
         .select('id')
         .single();
@@ -98,7 +98,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, onTaskCreated }: CreateTa
             name: taskName, 
             user_id: user.id,
             status: 'RAW',
-            raw_data: fileData.id // Use the file ID as the reference
+            raw_data: fileData.id, // Use the file ID as the reference
           }
         ])
         .select('id')
@@ -109,8 +109,35 @@ export const CreateTaskDialog = ({ open, onOpenChange, onTaskCreated }: CreateTa
       if (!taskData || !taskData.id) {
         throw new Error("Failed to create task");
       }
+
+      // 4. Get Original Data Method ID
+      const { data: methodData, error: methodError } = await supabase
+        .from('Methods')
+        .select('id')
+        .eq('label', 'Original data')
+        .single();
+
+      if (methodError || !methodData.id) throw methodError;
+
+      // 5. Create an entry in the TaskMethods table
+      const { data: taskMethodData, error: taskMethodError } = await supabase
+        .from('TaskMethods')
+        .insert([
+          {
+            name: `Original data`,
+            status: 'RAW',
+            task_id: taskData.id,
+            method_id: methodData.id,
+            created_at: new Date().toISOString(),
+            processed_file: fileData.id
+          }
+        ])
+        .select('id')
+        .single();
       
-      // 4. Update the task status to completed
+      if (!taskMethodData || !taskMethodData.id) throw taskMethodError;
+      
+      // 6. Update the task status to completed
       const { error: updateError } = await supabase
         .from('Tasks')
         .update({ status: 'PROCESSED' })

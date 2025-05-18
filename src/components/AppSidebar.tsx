@@ -374,15 +374,15 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
             <Menu className="h-5 w-5" />
           </Button>
 
-          <div className="w-full flex-1 flex flex-row gap-2 items-center justify-between">
-            <h1 className="text-lg font-semibold">
+          <div className="w-full flex-1 flex flex-row gap-2 items-center">
+            {/* <h1 className="text-lg font-semibold">
               {navigationItems.find((item) => item.href === location.pathname)
                 ?.name || "Cleanify"}
-            </h1>
+            </h1> */}
 
             <div className="flex flex-row gap-1 items-center">
-              <p className="text-sm text-gray-500">Hello,</p>
-              <p className="text-sm font-semibold">{profile?.username}</p>
+              <h4 className="text-sm text-gray-500">Hello,</h4>
+              <h4 className="text-sm font-semibold">{profile?.username}</h4>
             </div>
           </div>
         </header>
