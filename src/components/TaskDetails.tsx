@@ -12,6 +12,7 @@ import { TaskLoadingIndicator } from "./TaskLoadingIndicator";
 import { TaskVersion } from "@/types/version";
 import { Badge } from "./ui/badge";
 import { formatBytes } from "@/lib/format";
+import { useState } from "react";
 
 interface TaskDetailsProps {
   task: Tables<'Tasks'> | null;
@@ -30,6 +31,8 @@ export function TaskDetails({
   onDatasetUpdate,
   selectedVersion
 }: TaskDetailsProps) {
+  const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
+
   if (!task) {
     return (
       <Card>
@@ -79,7 +82,7 @@ export function TaskDetails({
             
             <div className="w-full">
               <TabsContent value="overview" className="w-full">
-                <DataOverview dataset={dataset} />
+                <DataOverview dataset={dataset} onSelectColumn={setSelectedColumn} />
               </TabsContent>
               
               <TabsContent value="quality" className="w-full">
@@ -101,9 +104,9 @@ export function TaskDetails({
                 <CorrelationAnalysis dataset={dataset} />
               </TabsContent>
 
-              <div className="bg-card rounded-lg border p-6 shadow-sm mt-6 w-full">
+              <div id="data-table-section" className="bg-card rounded-lg border p-6 shadow-sm mt-6 w-full">
                 <h2 className="text-lg font-semibold mb-4">Data Table</h2>
-                <DataTable dataset={dataset} />
+                <DataTable dataset={dataset} highlightColumn={selectedColumn} />
               </div>
             </div>
           </Tabs>
