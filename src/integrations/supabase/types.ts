@@ -123,18 +123,24 @@ export type Database = {
           created_at: string
           description: string
           id: number
+          is_enabled: boolean
+          keyword: string | null
           label: string
         }
         Insert: {
           created_at?: string
           description: string
           id?: number
+          is_enabled?: boolean
+          keyword?: string | null
           label?: string
         }
         Update: {
           created_at?: string
           description?: string
           id?: number
+          is_enabled?: boolean
+          keyword?: string | null
           label?: string
         }
         Relationships: []
@@ -168,6 +174,7 @@ export type Database = {
       }
       TaskMethods: {
         Row: {
+          config: Json | null
           created_at: string
           id: number
           method_id: number | null
@@ -178,6 +185,7 @@ export type Database = {
           task_id: number | null
         }
         Insert: {
+          config?: Json | null
           created_at?: string
           id?: number
           method_id?: number | null
@@ -188,6 +196,7 @@ export type Database = {
           task_id?: number | null
         }
         Update: {
+          config?: Json | null
           created_at?: string
           id?: number
           method_id?: number | null

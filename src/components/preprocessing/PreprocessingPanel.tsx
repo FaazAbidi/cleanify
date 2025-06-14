@@ -1,29 +1,45 @@
-import { useState, memo } from 'react';
-import { PreprocessingForm } from '@/components/preprocessing/PreprocessingForm';
+import { memo } from 'react';
 import { TaskVersion } from '@/types/version';
+import { PreprocessingForm } from './PreprocessingForm';
+import { Tables } from '@/integrations/supabase/types';
+import { DatasetType } from '@/types/dataset';
 
 interface PreprocessingPanelProps {
-  taskId: number;
+  task: Tables<'Tasks'>;
   versions: TaskVersion[];
+  dataset: DatasetType;
+  onDatasetUpdate: (dataset: DatasetType) => void;
+  progress: number;
+  loadingData: boolean;
   selectedVersion?: TaskVersion | null;
-  onVersionCreated?: () => void;
+  isProcessing?: boolean;
+  onVersionCreated?: (newVersionId: number) => void;
 }
 
 export const PreprocessingPanel = memo(function PreprocessingPanel({ 
-  taskId, 
+  task,
+  dataset,
   versions, 
+  onDatasetUpdate,
+  progress,
+  loadingData,
   selectedVersion,
-  onVersionCreated 
+  isProcessing = false,
+  onVersionCreated
 }: PreprocessingPanelProps) {
   return (
     <div className="space-y-6">
       <div>
-        
         <PreprocessingForm 
-          taskId={taskId} 
-          versions={versions} 
+          task={task}
+          dataset={dataset}
+          versions={versions}
           selectedVersion={selectedVersion}
-          onSuccess={onVersionCreated} 
+          progress={progress}
+          loadingData={loadingData}
+          isProcessing={isProcessing}
+          onSuccess={onVersionCreated}
+          onDatasetUpdate={onDatasetUpdate}
         />
       </div>
     </div>

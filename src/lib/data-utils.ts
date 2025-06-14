@@ -8,9 +8,17 @@ export const calculateColumnStats = (
   columnData: any[], 
   type: 'numeric' | 'categorical' | 'datetime' | 'text' | 'boolean'
 ): Partial<ColumnInfo> => {
-  const nonNullValues = columnData.filter(val => val !== null && val !== undefined && val !== '');
+  const nonNullValues = columnData.filter(val =>
+    val !== null &&
+    val !== undefined &&
+    val !== '' &&
+    String(val).toUpperCase() !== 'NA' &&
+    String(val).toUpperCase() !== 'NAN' &&
+    String(val).toUpperCase() !== 'NULL' &&
+    !(typeof val === 'number' && isNaN(val))
+  );
   const stats: Partial<ColumnInfo> = {
-    uniqueValues: new Set(columnData).size,
+    uniqueValues: new Set(nonNullValues).size,
     missingValues: columnData.length - nonNullValues.length,
     missingPercent: ((columnData.length - nonNullValues.length) / columnData.length) * 100,
   };
