@@ -99,7 +99,8 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
       <div
         className={cn(
           "fixed top-0 bottom-0 left-0 w-14 flex-shrink-0 bg-white border-r border-gray-200 flex-col items-center z-30",
-          isExpanded ? "hidden" : "md:flex",
+          "md:flex transform transition-transform duration-300 ease-in-out", 
+          isExpanded ? "md:opacity-0 md:-translate-x-full" : "md:opacity-100 md:translate-x-0",
           "hidden" // Always hidden on mobile
         )}
       >
@@ -166,7 +167,8 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
       <div
         className={cn(
           "fixed top-0 bottom-0 left-0 w-64 bg-white border-r border-gray-200 flex-col z-30",
-          isExpanded ? "md:flex" : "hidden",
+          "md:flex transform transition-transform duration-300 ease-in-out",
+          isExpanded ? "md:opacity-100 md:translate-x-0" : "md:opacity-0 md:-translate-x-full",
           "hidden" // Hidden on mobile
         )}
       >
@@ -347,6 +349,7 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
       <div
         className={cn(
           "flex flex-1 flex-col min-w-0",
+          "transition-all duration-300 ease-in-out", // Add transition to main content
           isExpanded ? "md:ml-64" : "md:ml-14", // Adjust margin based on sidebar state
           "ml-0" // No margin on mobile
         )}

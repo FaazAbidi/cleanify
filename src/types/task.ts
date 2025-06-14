@@ -2,7 +2,7 @@ export interface Task {
   id: string;
   name: string;
   description?: string;
-  status: 'pending' | 'processing' | 'completed' | 'error';
+  status: 'RAW' | 'PROCESSED' | 'FAILED' | 'RUNNING';
   created_at: string;
   updated_at: string;
   user_id: string;

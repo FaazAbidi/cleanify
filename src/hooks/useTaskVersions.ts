@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { TaskVersion } from '@/types/version';
@@ -9,6 +9,7 @@ export function useTaskVersions(taskId: string | number | undefined) {
   const [selectedVersion, setSelectedVersion] = useState<TaskVersion | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const pendingVersionIdRef = useRef<number | null>(null);
 
   // Function to fetch versions - pulled out so it can be called multiple times
   const fetchVersions = useCallback(async () => {
@@ -36,14 +37,27 @@ export function useTaskVersions(taskId: string | number | undefined) {
         .eq('task_id', taskIdNumber)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      if (error) throw `Error fetching task versions: ${error.message}`;
+
+      console.log(`Fetched ${data?.length} versions for task ${taskIdNumber}`);
 
       if (data && data.length > 0) {
         setVersions(data);
         
-        // Use function form of setState to access the current selectedVersion
-        // This removes the need for the selectedVersion dependency
+        // Check if there's a pending version ID to select
+        const pendingId = pendingVersionIdRef.current;
+        
         setSelectedVersion(currentSelectedVersion => {
+          if (pendingId) {
+            // If there's a pending version ID, try to find and select it
+            const pendingVersion = data.find(v => v.id === pendingId);
+            if (pendingVersion) {
+              // Clear the pending ID since we found and selected it
+              pendingVersionIdRef.current = null;
+              return pendingVersion;
+            }
+          }
+          
           if (!currentSelectedVersion) {
             return data[0];
           } else {
@@ -62,7 +76,7 @@ export function useTaskVersions(taskId: string | number | undefined) {
     } finally {
       setLoading(false);
     }
-  }, [taskId]); // Remove selectedVersion dependency
+  }, [taskId]);
 
   // Initial fetch of versions
   useEffect(() => {
@@ -71,15 +85,19 @@ export function useTaskVersions(taskId: string | number | undefined) {
 
   // Function to select a specific version
   const selectVersion = useCallback((versionId: number) => {
-    setSelectedVersion(currentVersions => {
+    setSelectedVersion(currentSelectedVersion => {
       const version = versions.find(v => v.id === versionId);
-      return version || currentVersions;
+      return version || currentSelectedVersion;
     });
   }, [versions]);
 
-  // Function to refresh versions - memoized to prevent unnecessary re-renders
-  const refreshVersions = useCallback(() => {
-    fetchVersions();
+  // Function to refresh versions with an option to select a specific version after refresh
+  const refreshVersions = useCallback(async (targetVersionId?: number) => {
+    if (targetVersionId) {
+      // Store the target version ID to select after refresh
+      pendingVersionIdRef.current = targetVersionId;
+    }
+    await fetchVersions();
   }, [fetchVersions]);
 
   return {

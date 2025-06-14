@@ -9,9 +9,12 @@ import { VersionHistory } from "@/components/version-history/VersionHistory";
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Info } from 'lucide-react';
 import { StatusBadge } from './ui/StatusBadge';
+import { VersionComparison } from "./version-history/VersionComparison";
+import { usePreprocessingPipeline } from '@/hooks/usePreprocessingPipeline';
+import { toast } from '@/components/ui/sonner';
 
 export interface TaskVersionTabsRef {
-  selectTab: (tab: 'exploration' | 'preprocessing' | 'history') => void;
+  selectTab: (tab: 'exploration' | 'preprocessing' | 'history' | 'compare') => void;
   selectVersion: (version: TaskVersion) => void;
 }
 
@@ -22,10 +25,12 @@ interface TaskVersionTabsProps {
   progress: number;
   onDatasetUpdate: (dataset: DatasetType) => void;
   versions: TaskVersion[];
-  refreshVersions: () => void;
+  refreshVersions: (versionId?: number) => void;
   onVersionSelect?: (versionId: number) => void;
   selectedVersion?: TaskVersion | null;
   isUnprocessedVersion: boolean;
+  isProcessing?: boolean;
+  currentStatus?: string | null;
 }
 
 export const TaskVersionTabs = memo(forwardRef<TaskVersionTabsRef, TaskVersionTabsProps>(function TaskVersionTabs({
@@ -38,12 +43,20 @@ export const TaskVersionTabs = memo(forwardRef<TaskVersionTabsRef, TaskVersionTa
   refreshVersions,
   onVersionSelect,
   selectedVersion,
-  isUnprocessedVersion
+  isUnprocessedVersion,
+  isProcessing = false,
+  currentStatus = null
 }: TaskVersionTabsProps, ref) {
   const [activeTab, setActiveTab] = useState<string>('exploration');
   const [selectedVersionId, setSelectedVersionId] = useState<number | undefined>(
     selectedVersion?.id || (versions.length > 0 ? versions[0].id : undefined)
   );
+  
+  // Track local unprocessed state for UI consistency
+  const [localIsUnprocessedVersion, setLocalIsUnprocessedVersion] = useState(isUnprocessedVersion);
+  
+  // Auto-start preprocessing hook
+  const { startPreprocessing, startPolling } = usePreprocessingPipeline();
   
   // Sync selectedVersionId when selectedVersion from parent changes
   useEffect(() => {
@@ -52,6 +65,23 @@ export const TaskVersionTabs = memo(forwardRef<TaskVersionTabsRef, TaskVersionTa
     }
   }, [selectedVersion, selectedVersionId]);
   
+  // Sync local unprocessed state with prop
+  useEffect(() => {
+    setLocalIsUnprocessedVersion(isUnprocessedVersion);
+  }, [isUnprocessedVersion]);
+  
+  // Check status when active tab changes or version changes
+  useEffect(() => {
+    // When switching to exploration tab, check if current version is running
+    if (activeTab === 'exploration' && selectedVersion) {
+      const isRunning = selectedVersion.status === 'RUNNING' || currentStatus === 'RUNNING';
+      setLocalIsUnprocessedVersion(isRunning || !selectedVersion.processed_file);
+    }
+  }, [activeTab, selectedVersion, currentStatus]);
+  
+  // Get effective status - use currentStatus if available and if it's for the selected version
+  const effectiveStatus = (currentStatus && selectedVersion) ? currentStatus : selectedVersion?.status;
+  
   const handleSelectVersion = (version: TaskVersion) => {
     setSelectedVersionId(version.id);
     if (onVersionSelect) {
@@ -59,10 +89,22 @@ export const TaskVersionTabs = memo(forwardRef<TaskVersionTabsRef, TaskVersionTa
     }
   };
   
+  // Handle tab change
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    
+    // Refresh data when switching to exploration tab
+    if (value === 'exploration' && selectedVersion) {
+      // Check if version is running
+      const isRunning = selectedVersion.status === 'RUNNING' || currentStatus === 'RUNNING';
+      setLocalIsUnprocessedVersion(isRunning || !selectedVersion.processed_file);
+    }
+  };
+  
   // Expose functions to parent components via ref
   useImperativeHandle(ref, () => ({
-    selectTab: (tab: 'exploration' | 'preprocessing' | 'history') => {
-      setActiveTab(tab);
+    selectTab: (tab: 'exploration' | 'preprocessing' | 'history' | 'compare') => {
+      handleTabChange(tab);
     },
     selectVersion: (version: TaskVersion) => {
       handleSelectVersion(version);
@@ -70,24 +112,29 @@ export const TaskVersionTabs = memo(forwardRef<TaskVersionTabsRef, TaskVersionTa
   }));
   
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-      <TabsList className="grid grid-cols-3 mb-6">
+    <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+      <TabsList className="grid grid-cols-4 mb-6">
         <TabsTrigger value="exploration">Data Exploration</TabsTrigger>
         <TabsTrigger value="preprocessing">Preprocessing</TabsTrigger>
         <TabsTrigger value="history">History</TabsTrigger>
+        <TabsTrigger value="compare">Compare</TabsTrigger>
       </TabsList>
       
       <TabsContent value="exploration" className="w-full">
-        {isUnprocessedVersion ? (  
+        {localIsUnprocessedVersion ? (  
             <Alert variant="default" className="mb-6">
               <Info className="h-5 w-5 mr-2" />
               <div>
                 <AlertTitle className="font-medium">
-                  Processing Status: {StatusBadge({status: selectedVersion?.status || 'pending'})}
+                  Processing Status: {StatusBadge({status: effectiveStatus || 'pending'})}
                 </AlertTitle>
                 <AlertDescription>
-                  This version hasn't been processed yet. No data available to display. 
-                  The pipeline may still be running or has encountered an error.
+                  {selectedVersion?.status === 'RUNNING' ? (
+                    <>This version is currently being processed. Data will be available once processing is complete.</>
+                  ) : (
+                    <>This version hasn't been processed yet. No data available to display. 
+                    The pipeline may still be running or has encountered an error.</>
+                  )}
                 </AlertDescription>
               </div>
             </Alert>
@@ -106,10 +153,43 @@ export const TaskVersionTabs = memo(forwardRef<TaskVersionTabsRef, TaskVersionTa
       <TabsContent value="preprocessing" className="w-full">
         {task ? (
           <PreprocessingPanel
-            taskId={task.id}
+            task={task}
+            dataset={dataset}
+            onDatasetUpdate={onDatasetUpdate}
+            progress={progress}
+            loadingData={loadingData}
             versions={versions}
             selectedVersion={versions.find(v => v.id === selectedVersionId) || null}
-            onVersionCreated={refreshVersions}
+            isProcessing={isProcessing}
+            onVersionCreated={(newVersionId) => {
+              // Use the improved refreshVersions to refresh and select the new version in one call
+              refreshVersions(newVersionId);
+              
+              // Automatically start preprocessing for the new version
+              if (newVersionId) {
+                console.log(`Starting preprocessing for new version: ${newVersionId}`);
+                
+                // Start the preprocessing pipeline
+                startPreprocessing({ versionId: newVersionId })
+                  .then(result => {
+                    if (result?.success) {
+                      refreshVersions(newVersionId);
+                      // Immediately mark as unprocessed for UI consistency
+                      setLocalIsUnprocessedVersion(true);
+                    } else {
+                      toast.error('Error starting preprocessing', {
+                        description: result?.error || 'Unknown error occurred'
+                      });
+                    }
+                  })
+                  .catch(error => {
+                    console.error('Error starting preprocessing:', error);
+                    toast.error('Failed to start preprocessing', {
+                      description: 'An unexpected error occurred.'
+                    });
+                  });
+              }
+            }}
           />
         ) : (
           <div className="bg-card rounded-lg border p-6 shadow-sm">
@@ -130,6 +210,26 @@ export const TaskVersionTabs = memo(forwardRef<TaskVersionTabsRef, TaskVersionTa
             <h2 className="text-lg font-semibold mb-4">Version History</h2>
             <p className="text-muted-foreground">No version history available for this task.</p>
           </div>
+        )}
+      </TabsContent>
+      
+      <TabsContent value="compare" className="w-full">
+        {versions.length > 1 ? (
+          <VersionComparison 
+            versions={versions} 
+            baseVersion={versions.find(v => v.id === selectedVersionId) || selectedVersion}
+            dataset={dataset}
+            task={task}
+            isUnprocessedVersion={localIsUnprocessedVersion}
+          />
+        ) : (
+            <Alert variant="default" className="mb-6">
+              <Info className="h-5 w-5 mr-2" />
+                <AlertTitle className="font-medium">
+                  Version Comparison
+                </AlertTitle>
+                <AlertDescription>At least two versions are needed for comparison. Please create a new version.</AlertDescription>
+            </Alert>
         )}
       </TabsContent>
     </Tabs>
