@@ -4,7 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Upload, Plus, BarChart3, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-export const QuickActions = () => {
+interface QuickActionsProps {
+  onUploadDataset?: () => void;
+}
+
+export const QuickActions = ({ onUploadDataset }: QuickActionsProps) => {
   const navigate = useNavigate();
 
   const actions = [
@@ -13,7 +17,7 @@ export const QuickActions = () => {
       description: "Start a new data preprocessing task",
       icon: Upload,
       color: "bg-blue-500 hover:bg-blue-600",
-      onClick: () => navigate('/'),
+      onClick: () => onUploadDataset?.(),
     },
     {
       title: "View Tasks",
