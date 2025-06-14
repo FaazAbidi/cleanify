@@ -308,7 +308,7 @@ function ReactFlowTreeInner({
     setEdges(initialEdges);
     
     setTimeout(() => {
-      reactFlowInstance.fitView({ padding: 1 });
+      reactFlowInstance.fitView({ padding: 0.5 });
     }, 50);
   }, [initialNodes, initialEdges, reactFlowInstance]);
 
@@ -322,7 +322,7 @@ function ReactFlowTreeInner({
   };
 
   const fitView = () => {
-    reactFlowInstance.fitView({ padding: 1 });
+    reactFlowInstance.fitView({ padding: 0.5 });
   };
 
   const onMoveEnd = useCallback((viewport) => {
@@ -333,7 +333,7 @@ function ReactFlowTreeInner({
     if (reactFlowInstance && !initialFitDoneRef.current && nodes.length > 0) {
       // Small delay to ensure all nodes are rendered
       setTimeout(() => {
-        reactFlowInstance.fitView({ padding: 1 });
+        reactFlowInstance.fitView({ padding: 0.5 });
         initialFitDoneRef.current = true;
       }, 100);
     }

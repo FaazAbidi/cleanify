@@ -211,72 +211,6 @@ export function useTaskData() {
     setProcessingProgress(0);
     
     try {
-      // If we only received a task ID, we need to fetch the full task method first
-      // let task: Tables<'Tasks'>;
-      
-      // if ('raw_data' in taskOrId) {
-      //   // We already have the full task object
-      //   task = taskOrId;
-      //   setSelectedTask(task);
-      // } else {
-      //   // We only have the ID, fetch the full task
-      //   const { data, error } = await retryFetch(() => 
-      //     Promise.resolve(
-      //       supabase
-      //         .from('Tasks')
-      //         .select('*')
-      //         .eq('id', taskIdNumber)
-      //         .single()
-      //     )
-      //   );
-          
-      //   if (error) throw error;
-      //   if (!data) throw new Error("Task not found");
-        
-      //   task = data;
-      //   setSelectedTask(data);
-      // }
-      
-      // // Determine file path and name based on input
-      // let filePath: string;
-      // let fileName: string;
-      // let file: Tables<'Files'> | null = null;
-      
-      // if (taskMethod.processed_file) {
-      //   if (typeof taskMethod.processed_file === 'string') {
-      //     // Use the provided file path from the selected version
-      //     filePath = taskMethod.processed_file;
-      //     // Extract filename from the path
-      //     fileName = filePath.split('/').pop() || 'dataset.csv';
-      //   } else {
-      //     // We have a file object from the joined version.file
-      //     file = versionFileOrPath;
-      //     filePath = file.path;
-      //     fileName = file.file_name;
-      //     setFileData(file);
-      //   }
-      // } else {
-      //   // First get the file details from the Files table using the raw_data field
-      //   const { data: fileDetails, error: fileDetailsError } = await retryFetch(() => 
-      //     Promise.resolve(
-      //       supabase
-      //         .from('Files')
-      //         .select('path, file_name, file_size')
-      //         .eq('id', taskMethod.processed_file)
-      //         )
-      //         .single()
-      //     )
-      //   );
-        
-      //   if (fileDetailsError) throw fileDetailsError;
-      //   if (!fileDetails) throw new Error("File not found");
-        
-      //   file = fileDetails;
-      //   filePath = fileDetails.path;
-      //   fileName = fileDetails.file_name;
-      //   setFileData(fileDetails);
-      // }
-
       const fileDetails = taskMethod.file
       if (fileDetails === null) {
         toast({
@@ -290,12 +224,19 @@ export function useTaskData() {
       const fileName = fileDetails.file_name || 'dataset.csv';
   
       setFileData(fileDetails);
+
+      let bucket = 'raw-data';
+      if (taskMethod.prev_version === null) {
+        bucket = 'raw-data';
+      } else {
+        bucket = 'processed-data';
+      }
       
       // Now download the file using the path
       const { data: fileData, error: fileError } = await retryFetch(() => 
         Promise.resolve(
           supabase.storage
-            .from('raw-data')
+            .from(bucket)
             .download(fileDetails.path)
         )
       );

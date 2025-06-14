@@ -25,7 +25,7 @@ export function useMethods() {
         if (error) throw error;
 
         if (data) {
-          setMethods(data);
+          setMethods(data.filter((method) => method.is_enabled));
         } else {
           setMethods([]);
         }

@@ -10,6 +10,19 @@ export interface VersionTree {
 } 
 
 // Type for a task version from the TaskMethods table
-export interface TaskVersion extends Tables<'TaskMethods'> {
+export interface TaskVersion {
+  // Base fields from TaskMethods
+  created_at: string;
+  id: number;
+  method_id: number | null;
+  name: string;
+  prev_version: number | null;
+  processed_file: number | null;
+  status: "RUNNING" | "RAW" | "PROCESSED" | "FAILED";
+  task_id: number | null;
+  
+  // Extended fields for UI
   file?: Tables<'Files'> | null;
+  data?: any[] | null; // Dataset data for this version
+  version_number?: number;
 }

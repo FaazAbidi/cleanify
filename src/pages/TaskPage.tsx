@@ -5,10 +5,11 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/use-toast";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { useTask } from "@/hooks/useTask";
 import { useTaskData } from "@/hooks/useTaskData";
 import { useTaskVersions } from "@/hooks/useTaskVersions";
+import { usePreprocessingStatus } from "@/hooks/usePreprocessingStatus";
 import { TaskMetadata } from "@/components/TaskMetadata";
 import { TaskVersionSelector } from "@/components/TaskVersionSelector";
 import { TaskVersionTabs, TaskVersionTabsRef } from "@/components/TaskVersionTabs";
@@ -61,6 +62,12 @@ const TaskPage = () => {
     fileData
   } = useTaskData();
 
+  // Use the preprocessing status hook and pass refreshVersions to update versions when status changes
+  const { isProcessing, processingVersion, currentStatus } = usePreprocessingStatus(
+    selectedVersion,
+    refreshVersions
+  );
+
   // Function to select a version and navigate to exploration tab
   const selectVersionAndExplore = useCallback((version: TaskVersion) => {
     // First select the version
@@ -86,7 +93,11 @@ const TaskPage = () => {
   // Handle loading task data - wrapped in useCallback to avoid dependency issues
   const handleLoadTaskData = useCallback(() => {
     if (taskId && task && !loadingTaskData) {
-      if (selectedVersion && selectedVersion.file && selectedVersion.processed_file) {
+      // Check if the version is in a RUNNING state or doesn't have file data
+      if (selectedVersion && 
+          selectedVersion.status !== 'RUNNING' && 
+          selectedVersion.file && 
+          selectedVersion.processed_file) {
         // Pass the file object from the selected version if available
         setIsUnprocessedVersion(false);
         loadTaskData(selectedVersion);
@@ -96,6 +107,18 @@ const TaskPage = () => {
       setVersionChanged(false);
     }
   }, [taskId, task, selectedVersion, loadTaskData, loadingTaskData]);
+
+  // When currentStatus changes to PROCESSED, reload the data
+  useEffect(() => {
+    if (currentStatus === 'PROCESSED' && selectedVersion) {
+      console.log('Status changed to PROCESSED, reloading data');
+      setVersionChanged(true);
+      // Trigger data reload on next render cycle
+      setTimeout(() => {
+        handleLoadTaskData();
+      }, 0);
+    }
+  }, [currentStatus, selectedVersion, handleLoadTaskData]);
 
   // Initial data loading or when task/version changes
   useEffect(() => {
@@ -156,7 +179,10 @@ const TaskPage = () => {
     versions,
     refreshVersions,
     onVersionSelect: handleVersionSelect,
-    selectedVersion
+    selectedVersion,
+    isUnprocessedVersion,
+    isProcessing,
+    currentStatus
   }), [
     selectedTask, 
     task, 
@@ -167,7 +193,10 @@ const TaskPage = () => {
     versions, 
     refreshVersions,
     handleVersionSelect,
-    selectedVersion
+    selectedVersion,
+    isUnprocessedVersion,
+    isProcessing,
+    currentStatus
   ]);
 
   // Create context value
@@ -195,6 +224,16 @@ const TaskPage = () => {
               </Button>
               <h1 className="text-2xl font-bold">{task?.name || "Task Details"}</h1>
             </div>
+            
+            {/* Add preprocessing status indicator */}
+            {isProcessing && (
+              <div className="flex items-center text-amber-600">
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <span className="text-sm">
+                  Preprocessing {processingVersion?.name}...
+                </span>
+              </div>
+            )}
           </div>
           
           <div className="w-full">
@@ -215,7 +254,7 @@ const TaskPage = () => {
                   />
                 </div>
                 
-                <TaskVersionTabs ref={tabsRef} {...versionTabsProps} isUnprocessedVersion={isUnprocessedVersion} />
+                <TaskVersionTabs ref={tabsRef} {...versionTabsProps} />
               </div>
             ) : (
               <div className="text-center py-8">

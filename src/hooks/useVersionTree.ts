@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { TaskVersion } from "@/hooks/useTaskVersions";
+import { TaskVersion } from "@/types/version";
 import { VersionNode, VersionTree } from "@/types/version";
 
 export function useVersionTree(versions: TaskVersion[]): VersionTree {

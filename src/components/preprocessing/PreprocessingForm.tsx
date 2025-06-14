@@ -5,16 +5,20 @@ import * as z from 'zod';
 import { useMethods } from '@/hooks/useMethods';
 import { useCreateTaskVersion } from '@/hooks/useCreateTaskVersion';
 import { TaskVersion } from '@/types/version';
+import { getErrorMessage } from '@/lib/utils';
+import { useTaskData } from '@/hooks/useTaskData';
+import { MethodConfigFactory, PreprocessingMethod } from './MethodConfigFactory';
 
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, Info } from 'lucide-react';
-import { toast } from 'sonner';
+import { Loader2, Info, ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { Tables } from '@/integrations/supabase/types';
+import { DatasetType } from '@/types/dataset';
 
 // Form schema for validation
 const preprocessingFormSchema = z.object({
@@ -26,21 +30,36 @@ const preprocessingFormSchema = z.object({
 type PreprocessingFormValues = z.infer<typeof preprocessingFormSchema>;
 
 interface PreprocessingFormProps {
-  taskId: number;
+  task: Tables<'Tasks'>;
   versions: TaskVersion[];
+  dataset: DatasetType;
   selectedVersion?: TaskVersion | null;
-  onSuccess?: () => void;
+  progress: number;
+  loadingData: boolean;
+  isProcessing: boolean;
+  onSuccess?: (newVersionId: number) => void;
+  onDatasetUpdate: (dataset: DatasetType) => void;
 }
 
 export const PreprocessingForm = memo(function PreprocessingForm({ 
-  taskId, 
+  task,
+  dataset,
   versions, 
+  onDatasetUpdate,
+  progress,
+  loadingData,
   selectedVersion,
+  isProcessing,
   onSuccess 
 }: PreprocessingFormProps) {
   const { methods, loading: methodsLoading } = useMethods();
-  const { createTaskVersion, loading: createLoading, error } = useCreateTaskVersion();
+  const { createTaskVersion, loading: createLoading, error: createError } = useCreateTaskVersion();
+  
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [showMethodConfig, setShowMethodConfig] = useState(false);
+  const [selectedMethodKeyword, setSelectedMethodKeyword] = useState<PreprocessingMethod | null>(null);
+  const [methodConfig, setMethodConfig] = useState<any>(null);
 
   // Form setup
   const form = useForm<PreprocessingFormValues>({
@@ -72,31 +91,107 @@ export const PreprocessingForm = memo(function PreprocessingForm({
     }
   }, [selectedVersion, form]);
 
-  // Form submission handler
-  const onSubmit = async (values: PreprocessingFormValues) => {
+  // Get the keyword for the selected method
+  const getMethodKeyword = (methodId: string): PreprocessingMethod | null => {
+    const method = methods.find(m => m.id.toString() === methodId);
+    
+    if (method?.keyword) {
+      const keyword = method.keyword.toString().toLowerCase();
+      
+      // Ensure the keyword is a valid PreprocessingMethod
+      if (['fix_missing', 'normalize', 'remove_outliers', 'encode_categorical'].includes(keyword)) {
+        return keyword as PreprocessingMethod;
+      }
+    }
+    
+    // If no valid keyword found, check if the method label contains a hint
+    if (method?.label) {
+      const label = method.label.toLowerCase();
+      
+      if (label.includes('missing')) return 'fix_missing';
+      if (label.includes('normalize')) return 'normalize';
+      if (label.includes('outlier')) return 'remove_outliers';
+      if (label.includes('categorical') || label.includes('encoding')) return 'encode_categorical';
+    }
+    
+    return null;
+  };
+
+  // Handle method change
+  const handleMethodChange = (methodId: string) => {
+    form.setValue('methodId', methodId);
+    const keyword = getMethodKeyword(methodId);
+    setSelectedMethodKeyword(keyword);
+    
+    // Auto-generate a version name based on the method
+    const method = methods.find(m => m.id.toString() === methodId);
+    if (method) {
+      form.setValue('versionName', `${method.label} - ${new Date().toLocaleString()}`);
+    }
+  };
+
+  // Handle continue to configuration
+  const handleContinueToConfig = () => {
+    const result = form.trigger(['methodId', 'parentVersionId', 'versionName']);
+    if (result) {
+      setShowMethodConfig(true);
+    }
+  };
+
+  // Handle back to method selection
+  const handleBackToMethodSelection = () => {
+    setShowMethodConfig(false);
+    setMethodConfig(null);
+  };
+
+  // Handle method configuration change
+  const handleMethodConfigSubmit = (config: any) => {
+    setMethodConfig(config);
+    handleSubmitWithConfig(config);
+  };
+
+  // Form submission handler with configuration
+  const handleSubmitWithConfig = async (config: any) => {
+    const values = form.getValues();
+    
     setSubmitting(true);
+    setFormError(null);
     
     try {
+      // Create the version with method configuration
       const result = await createTaskVersion({
-        taskId,
+        taskId: task.id,
         methodId: parseInt(values.methodId),
         name: values.versionName,
-        parentVersionId: parseInt(values.parentVersionId)
+        parentVersionId: parseInt(values.parentVersionId),
+        config // The config parameter is supported in the CreateTaskVersionInput interface
       });
       
-      if (result) {
-        toast.success('New preprocessing version created successfully');
-        form.reset();
-        if (onSuccess) onSuccess();
-      } else {
-        toast.error('Failed to create preprocessing version');
+      if (!result) {
+        throw new Error('Failed to create preprocessing version');
       }
+      
+      // Reset form and state
+      form.reset();
+      setShowMethodConfig(false);
+      setSelectedMethodKeyword(null);
+      setMethodConfig(null);
+      
+      // Notify parent component about the new version
+      if (onSuccess) onSuccess(result.id);
+      
     } catch (err) {
-      console.error('Error submitting form:', err);
-      toast.error('An error occurred while creating the preprocessing version');
+      console.error('Error creating version:', err);
+      setFormError(getErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Cancel method configuration
+  const handleCancelMethodConfig = () => {
+    setShowMethodConfig(false);
+    setMethodConfig(null);
   };
 
   return (
@@ -113,109 +208,166 @@ export const PreprocessingForm = memo(function PreprocessingForm({
             <Info className="h-4 w-4" />
             <AlertDescription>
               Creating a new version based on <strong>{selectedVersion.name}</strong>. 
-              To use a different parent version, change the selection in the Version Selector above.
+              {selectedVersion.status === 'RUNNING' && (
+                <span className="block my-2 text-amber-600">
+                  <Loader2 className="inline-block h-3 w-3 mr-1 animate-spin" />
+                  This version is currently being processed.
+                </span>
+              )}
             </AlertDescription>
           </Alert>
         )}
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="parentVersionId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Parent Version</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    value={field.value}
-                    disabled={true}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select parent version" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {versions.map((version) => (
-                        <SelectItem key={version.id} value={version.id.toString()}>
-                          {version.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    This is the version to which the preprocessing method will be applied
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        
+        {formError && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertDescription>{formError}</AlertDescription>
+          </Alert>
+        )}
+        
+        {!showMethodConfig ? (
+          <Form {...form}>
+            <form className="space-y-6">
+              <FormField
+                control={form.control}
+                name="parentVersionId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Parent Version</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      value={field.value}
+                      disabled={true}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select parent version" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {versions.map((version) => (
+                          <SelectItem key={version.id} value={version.id.toString()}>
+                            {version.name}
+                            {version.status === 'RUNNING' && ' (Processing...)'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      This is the version to which the preprocessing method will be applied
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="methodId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Preprocessing Method</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    value={field.value}
-                    disabled={submitting || methodsLoading || methods.length === 0}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a method" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {methods.map((method) => (
-                        <SelectItem key={method.id} value={method.id.toString()}>
-                          {method.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Select the preprocessing method to apply
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="methodId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Preprocessing Method</FormLabel>
+                    <Select 
+                      onValueChange={(value) => handleMethodChange(value)} 
+                      value={field.value}
+                      disabled={submitting || methodsLoading || methods.length === 0 || isProcessing}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a method" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {methods.map((method) => (
+                          <SelectItem key={method.id} value={method.id.toString()}>
+                            {method.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Select the preprocessing method to apply
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="versionName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Version Name</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Enter version name" 
-                      {...field} 
-                      disabled={submitting}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Give a descriptive name to identify this version
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </form>
-        </Form>
+              <FormField
+                control={form.control}
+                name="versionName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Version Name</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Enter version name" 
+                        {...field} 
+                        disabled={submitting || isProcessing}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Give a descriptive name to identify this version
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex justify-end pt-4">
+                <Button 
+                  type="button" 
+                  onClick={handleContinueToConfig} 
+                  disabled={
+                    !form.getValues().methodId || 
+                    submitting || 
+                    methodsLoading || 
+                    methods.length === 0 || 
+                    versions.length === 0 || 
+                    isProcessing
+                  }
+                >
+                  Configure Method
+                </Button>
+              </div>
+            </form>
+          </Form>
+        ) : (
+          <div>
+            <div className="mb-6">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleBackToMethodSelection} 
+                disabled={submitting}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Method Selection
+              </Button>
+            </div>
+            
+            <div className="mb-4">
+              <h3 className="text-base font-medium mb-1">
+                {methods.find(m => m.id.toString() === form.getValues().methodId)?.label}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {methods.find(m => m.id.toString() === form.getValues().methodId)?.description}
+              </p>
+            </div>
+            
+            <Separator className="my-4" />
+            
+            {selectedMethodKeyword && dataset && (
+              <MethodConfigFactory
+                method={selectedMethodKeyword}
+                dataset={dataset}
+                onSubmit={handleMethodConfigSubmit}
+                onCancel={handleCancelMethodConfig}
+                isLoading={submitting}
+              />
+            )}
+          </div>
+        )}
       </CardContent>
-      <CardFooter className="flex justify-end">
-        <Button 
-          type="submit" 
-          onClick={form.handleSubmit(onSubmit)} 
-          disabled={submitting || methodsLoading || methods.length === 0 || versions.length === 0}
-        >
-          {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Create Version
-        </Button>
-      </CardFooter>
     </Card>
   );
 }); 

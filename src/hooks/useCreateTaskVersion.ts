@@ -8,6 +8,7 @@ interface CreateTaskVersionInput {
   methodId: number;
   name: string;
   parentVersionId: number | null;
+  config?: any;
 }
 
 // Hook to create a new task version (TaskMethods entry)
@@ -20,7 +21,7 @@ export function useCreateTaskVersion() {
       setLoading(true);
       setError(null);
 
-      const { taskId, methodId, name, parentVersionId } = input;
+      const { taskId, methodId, name, parentVersionId, config } = input;
 
       // Create a new entry in the TaskMethods table
       const { data, error } = await supabase
@@ -31,6 +32,7 @@ export function useCreateTaskVersion() {
           name,
           prev_version: parentVersionId,
           status: 'RAW',
+          config: config
         })
         .select()
         .single();

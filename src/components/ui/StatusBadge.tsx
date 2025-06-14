@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Badge, BadgeProps } from "./badge";
 import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 
 export type StatusType =
   | "PROCESSED"
@@ -81,9 +82,10 @@ export function StatusBadge({
   return (
     <Badge
       variant={variant === "outline" ? "outline" : "secondary"}
-      className={cn(colorClass, sizeClass, className)}
+      className={cn(colorClass, sizeClass, "items-center gap-1", className)}
       {...props}
     >
+      {status === "RUNNING" && <Loader2 className="h-3 w-3 animate-spin" />}
       {displayLabel}
     </Badge>
   );

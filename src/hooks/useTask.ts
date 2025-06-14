@@ -24,7 +24,7 @@ export function useTask(taskId: string) {
         const { data, error } = await supabase
           .from('Tasks')
           .select('*')
-          .eq('id', taskId)
+          .eq('id', parseInt(taskId))
           .single();
           
         if (error) throw error;
