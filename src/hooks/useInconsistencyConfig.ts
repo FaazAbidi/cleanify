@@ -1,33 +1,35 @@
 import { useState, useEffect } from 'react';
 import { DatasetType, ColumnInfo } from '@/types/dataset';
-import { ColumnImputationConfig } from '@/components/preprocessing/ImputationMethodSelector';
-import { ImputationMethod, Method, MethodConfig } from '@/types/methods';
+import { ColumnConfig, InconsistencyMethod, Method, MethodConfig } from '@/types/methods';
 
-interface UseImputationConfigProps {
+export interface ColumnInconsistencyConfig {
+  columnName: string;
+  method: InconsistencyMethod;
+}
+
+interface UseInconsistencyConfigProps {
   dataset: DatasetType | null;
 }
 
-interface UseImputationConfigReturn {
+interface UseInconsistencyConfigReturn {
   selectedColumns: string[];
   setSelectedColumns: (columns: string[]) => void;
-  columnConfigurations: ColumnImputationConfig[];
-  updateColumnConfiguration: (configurations: ColumnImputationConfig[]) => void;
-  getDefaultMethodForColumn: (columnInfo: ColumnInfo) => ImputationMethod;
+  columnConfigurations: ColumnInconsistencyConfig[];
+  updateColumnConfiguration: (configurations: ColumnInconsistencyConfig[]) => void;
+  getDefaultMethodForColumn: (columnInfo: ColumnInfo) => InconsistencyMethod;
   generatePayload: () => MethodConfig | null;
 }
 
-export function useImputationConfig({ dataset }: UseImputationConfigProps): UseImputationConfigReturn {
+export function useInconsistencyConfig({ dataset }: UseInconsistencyConfigProps): UseInconsistencyConfigReturn {
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
-  const [columnConfigurations, setColumnConfigurations] = useState<ColumnImputationConfig[]>([]);
+  const [columnConfigurations, setColumnConfigurations] = useState<ColumnInconsistencyConfig[]>([]);
 
-  // Determine default imputation method based on column type
-  const getDefaultMethodForColumn = (columnInfo: ColumnInfo): ImputationMethod => {
+  // Determine default inconsistency method based on column type
+  const getDefaultMethodForColumn = (columnInfo: ColumnInfo): InconsistencyMethod => {
     if (columnInfo.type === 'numeric') {
       return 'impute_mean';
     } else if (columnInfo.type === 'categorical' || columnInfo.type === 'text' || columnInfo.type === 'boolean') {
       return 'impute_mode';
-    } else if (columnInfo.type === 'datetime') {
-      return 'impute_random';
     } else {
       return 'remove';
     }
@@ -38,7 +40,7 @@ export function useImputationConfig({ dataset }: UseImputationConfigProps): UseI
     if (!dataset) return;
 
     // Create default configurations for newly selected columns
-    const newConfigs: ColumnImputationConfig[] = [];
+    const newConfigs: ColumnInconsistencyConfig[] = [];
     
     selectedColumns.forEach(columnName => {
       // Check if configuration already exists
@@ -63,7 +65,7 @@ export function useImputationConfig({ dataset }: UseImputationConfigProps): UseI
   }, [selectedColumns, dataset]);
 
   // Update column configurations
-  const updateColumnConfiguration = (configurations: ColumnImputationConfig[]) => {
+  const updateColumnConfiguration = (configurations: ColumnInconsistencyConfig[]) => {
     setColumnConfigurations(configurations);
   };
 
@@ -75,8 +77,7 @@ export function useImputationConfig({ dataset }: UseImputationConfigProps): UseI
 
     const columns: Record<string, {
       type: 'QUANTITATIVE' | 'QUALITATIVE';
-      step: ImputationMethod;
-      value: string | null;
+      step: InconsistencyMethod;
     }> = {};
     
     columnConfigurations.forEach(config => {
@@ -88,19 +89,18 @@ export function useImputationConfig({ dataset }: UseImputationConfigProps): UseI
 
         columns[config.columnName] = {
           type: columnType,
-          step: config.method,
-          value: config.method === 'impute_constant' ? config.value : null
+          step: config.method
         };
       }
     });
     
     return {
       technique: 'data_cleaning' as const,
-      method: 'fix_missing' as Method,
+      method: 'fix_inconsistencies' as Method,
       step: null,
       value: null,
       target: null,
-      columns
+      columns: columns as Record<string, ColumnConfig>
     };
   };
 

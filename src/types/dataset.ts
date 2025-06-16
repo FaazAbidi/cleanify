@@ -1,4 +1,3 @@
-
 export interface ColumnInfo {
   name: string;
   type: 'numeric' | 'categorical' | 'datetime' | 'text' | 'boolean';
@@ -14,6 +13,8 @@ export interface ColumnInfo {
   range?: [number, number];
   distribution?: Record<string | number, number>;
   outliers?: number;
+  skewness?: number;
+  isSkewed?: boolean;
 }
 
 export interface CorrelationData {

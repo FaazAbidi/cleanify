@@ -25,6 +25,7 @@ export function MissingDataHandler({
   const [activeTab, setActiveTab] = useState<string>('column-selection');
   const [initialSelectionDone, setInitialSelectionDone] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
   
   const {
     selectedColumns,
@@ -44,10 +45,31 @@ export function MissingDataHandler({
   // Handle tab change
   const handleTabChange = (value: string) => {
     setActiveTab(value);
+    setValidationError(null);
+  };
+
+  // Validate configurations
+  const validateConfigurations = () => {
+    // Check if there are any columns using impute_constant method without a value
+    const invalidConfigs = columnConfigurations.filter(
+      config => config.method === 'impute_constant' && (!config.value || config.value.trim() === '')
+    );
+    
+    if (invalidConfigs.length > 0) {
+      const columnNames = invalidConfigs.map(config => config.columnName).join(', ');
+      setValidationError(`Please provide constant values for the following columns: ${columnNames}`);
+      return false;
+    }
+    
+    return true;
   };
 
   // Handle form submission
   const handleSubmit = () => {
+    if (!validateConfigurations()) {
+      return;
+    }
+    
     const payload = generatePayload();
     if (payload) {
       console.log(payload);
@@ -167,6 +189,13 @@ export function MissingDataHandler({
             </TabsContent>
             
             <TabsContent value="method-configuration">
+              {validationError && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{validationError}</AlertDescription>
+                </Alert>
+              )}
+              
               <ImputationMethodSelector
                 dataset={dataset}
                 selectedColumns={selectedColumns}

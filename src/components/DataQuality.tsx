@@ -173,6 +173,16 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
                       className="h-1"
                     />
                   </div>
+                  {column.type === 'numeric' && column.skewness !== undefined && (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span>Skewness</span>
+                        <span className={column.isSkewed ? "text-amber-600 font-medium" : ""}>
+                          {column.skewness.toFixed(2)} {column.isSkewed && "(Significant)"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -200,6 +210,67 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
                   Next
                 </button>
               </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Data Skewness</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {dataset.columns.some(col => col.type === 'numeric' && col.skewness !== undefined) ? (
+            <div className="space-y-6">
+              <div className="text-sm text-gray-600">
+                <p>Skewness measures how asymmetrical the distribution of values is in your numeric columns. 
+                   High skewness (above 1 or below -1) indicates that your data might benefit from transformation before analysis.</p>
+              </div>
+              
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium">Skewed Columns</h4>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {dataset.columns
+                    .filter(col => col.type === 'numeric' && col.skewness !== undefined && col.isSkewed)
+                    .map(col => (
+                      <div key={col.name} className="flex items-center p-3 bg-amber-50 rounded-md">
+                        <div className="flex-1">
+                          <div className="font-medium">{col.name}</div>
+                          <div className="text-xs text-gray-500">
+                            Skewness: {col.skewness ? col.skewness.toFixed(2) : 'N/A'}
+                            {' '}
+                            ({col.skewness && col.skewness > 0 ? 'Right-skewed' : 'Left-skewed'})
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+                
+                {dataset.columns.filter(col => col.type === 'numeric' && col.skewness !== undefined && col.isSkewed).length === 0 && (
+                  <div className="text-center py-4 text-gray-500">
+                    No significantly skewed columns detected
+                  </div>
+                )}
+              </div>
+              
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium">Recommendations</h4>
+                <ul className="list-disc space-y-2 pl-5 text-sm">
+                  <li>
+                    For right-skewed data (positive skewness), try log transformation: log(x)
+                  </li>
+                  <li>
+                    For left-skewed data (negative skewness), try exponential transformation: exp(x)
+                  </li>
+                  <li>
+                    Consider square root transformation for moderately right-skewed data
+                  </li>
+                </ul>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-4 text-gray-500">
+              Skewness information not available. Run the data analysis again to calculate skewness.
             </div>
           )}
         </CardContent>

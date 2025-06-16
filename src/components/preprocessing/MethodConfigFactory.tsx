@@ -1,11 +1,15 @@
 import { DatasetType } from '@/types/dataset';
 import { MissingDataHandler } from './MissingDataHandler';
+import { InconsistencyHandler } from './InconsistencyHandler';
+import { OutlierHandler } from './OutlierHandler';
+import { SkewnessHandler } from './SkewnessHandler';
+import { StandardizationHandler } from './StandardizationHandler';
+import { NormalizationHandler } from './NormalizationHandler';
 import { Loader2 } from 'lucide-react';
-
-export type PreprocessingMethod = 'fix_missing' | 'normalize' | 'remove_outliers' | 'encode_categorical';
+import { Method } from '@/types/methods';
 
 interface MethodConfigFactoryProps {
-  method: PreprocessingMethod;
+  method: Method;
   dataset: DatasetType | null;
   onSubmit: (payload: any) => void;
   onCancel: () => void;
@@ -30,7 +34,7 @@ export function MethodConfigFactory({
   }
   
   // Normalize method name if needed
-  const normalizedMethod = method?.toLowerCase?.() as PreprocessingMethod;
+  const normalizedMethod = method?.toLowerCase?.() as Method;
 
   const handleCancel = () => {
     onCancel();
@@ -41,6 +45,51 @@ export function MethodConfigFactory({
     case 'fix_missing':
       return (
         <MissingDataHandler
+          dataset={dataset}
+          onSubmit={onSubmit}
+          onCancel={onCancel}
+          isLoading={isLoading}
+        />
+      );
+    case 'fix_inconsistencies':
+      return (
+        <InconsistencyHandler
+          dataset={dataset}
+          onSubmit={onSubmit}
+          onCancel={onCancel}
+          isLoading={isLoading}
+        />
+      );
+    case 'fix_outliers':
+      return (
+        <OutlierHandler
+          dataset={dataset}
+          onSubmit={onSubmit}
+          onCancel={onCancel}
+          isLoading={isLoading}
+        />
+      );
+    case 'fix_skewness':
+      return (
+        <SkewnessHandler
+          dataset={dataset}
+          onSubmit={onSubmit}
+          onCancel={onCancel}
+          isLoading={isLoading}
+        />
+      );
+    case 'perform_standarization':
+      return (
+        <StandardizationHandler
+          dataset={dataset}
+          onSubmit={onSubmit}
+          onCancel={onCancel}
+          isLoading={isLoading}
+        />
+      );
+    case 'perform_normalization':
+      return (
+        <NormalizationHandler
           dataset={dataset}
           onSubmit={onSubmit}
           onCancel={onCancel}

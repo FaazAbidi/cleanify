@@ -6,8 +6,7 @@ import { useMethods } from '@/hooks/useMethods';
 import { useCreateTaskVersion } from '@/hooks/useCreateTaskVersion';
 import { TaskVersion } from '@/types/version';
 import { getErrorMessage } from '@/lib/utils';
-import { useTaskData } from '@/hooks/useTaskData';
-import { MethodConfigFactory, PreprocessingMethod } from './MethodConfigFactory';
+import { MethodConfigFactory } from './MethodConfigFactory';
 
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -19,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tables } from '@/integrations/supabase/types';
 import { DatasetType } from '@/types/dataset';
+import { Method } from '@/types/methods';
 
 // Form schema for validation
 const preprocessingFormSchema = z.object({
@@ -58,7 +58,7 @@ export const PreprocessingForm = memo(function PreprocessingForm({
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [showMethodConfig, setShowMethodConfig] = useState(false);
-  const [selectedMethodKeyword, setSelectedMethodKeyword] = useState<PreprocessingMethod | null>(null);
+  const [selectedMethodKeyword, setSelectedMethodKeyword] = useState<Method | null>(null);
   const [methodConfig, setMethodConfig] = useState<any>(null);
 
   // Form setup
@@ -92,28 +92,15 @@ export const PreprocessingForm = memo(function PreprocessingForm({
   }, [selectedVersion, form]);
 
   // Get the keyword for the selected method
-  const getMethodKeyword = (methodId: string): PreprocessingMethod | null => {
+  const getMethodKeyword = (methodId: string): Method | null => {
     const method = methods.find(m => m.id.toString() === methodId);
     
     if (method?.keyword) {
       const keyword = method.keyword.toString().toLowerCase();
       
-      // Ensure the keyword is a valid PreprocessingMethod
-      if (['fix_missing', 'normalize', 'remove_outliers', 'encode_categorical'].includes(keyword)) {
-        return keyword as PreprocessingMethod;
-      }
+      return keyword as Method;
     }
-    
-    // If no valid keyword found, check if the method label contains a hint
-    if (method?.label) {
-      const label = method.label.toLowerCase();
-      
-      if (label.includes('missing')) return 'fix_missing';
-      if (label.includes('normalize')) return 'normalize';
-      if (label.includes('outlier')) return 'remove_outliers';
-      if (label.includes('categorical') || label.includes('encoding')) return 'encode_categorical';
-    }
-    
+
     return null;
   };
 
