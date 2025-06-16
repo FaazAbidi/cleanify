@@ -27,14 +27,16 @@ import {
 } from '@/components/ui/tooltip';
 import { Button } from '../ui/button';
 import { ColumnExploreDialog } from './ColumnExploreDialog';
+import { ImputationMethod, ImputationMethodCategorical, ImputationMethodNumeric } from '@/types/methods';
 
 // Define imputation methods
-export type ImputationMethod = 'impute_mean' | 'impute_mode' | 'impute_median' | 'impute_random' | 'remove';
+// export type ImputationMethod = 'impute_mean' | 'impute_mode' | 'impute_median' | 'impute_random' | 'remove';
 
 // Define column configuration
 export interface ColumnImputationConfig {
   columnName: string;
   method: ImputationMethod;
+  value?: string | null;
 }
 
 interface ImputationMethodSelectorProps {
@@ -85,9 +87,9 @@ export function ImputationMethodSelector({
   // Get available methods for a column based on its type
   const getAvailableMethods = (columnName: string): ImputationMethod[] => {
     if (isCategorical(columnName)) {
-      return ['impute_mode', 'impute_random', 'remove'];
+      return ['impute_mode', 'impute_random', 'remove'] as ImputationMethodCategorical[];
     }
-    return ['impute_mean', 'impute_mode', 'impute_median', 'impute_random', 'remove'];
+    return ['impute_mean', 'impute_median', 'impute_random', 'remove', 'impute_constant'] as ImputationMethodNumeric[];
   };
 
   // Handle method change for a column
@@ -101,6 +103,16 @@ export function ImputationMethodSelector({
     onConfigChange(updatedConfigs);
   };
 
+  // Handle constant value change for a column
+  const handleConstantValueChange = (columnName: string, value: string) => {
+    const updatedConfigs = columnConfigurations.map(config => {
+      if (config.columnName === columnName) {
+        return { ...config, value };
+      }
+      return config;
+    });
+    onConfigChange(updatedConfigs);
+  };
 
   const handleExploreColumn = (column: ColumnInfo) => {
     setSelectedColumnForExplore(column);
@@ -115,6 +127,7 @@ export function ImputationMethodSelector({
       case 'impute_median': return 'Median';
       case 'impute_random': return 'Random';
       case 'remove': return 'Remove';
+      case 'impute_constant': return 'Constant';
       default: return method;
     }
   };
@@ -132,6 +145,8 @@ export function ImputationMethodSelector({
         return 'Replace missing values with a random value from the column.';
       case 'remove': 
         return 'Remove rows with missing values in this column.';
+      case 'impute_constant': 
+        return 'Replace missing values with a user-specified constant value. Enter the desired value in the input field.';
       default: 
         return '';
     }
@@ -203,16 +218,27 @@ export function ImputationMethodSelector({
                                 ))}
                               </SelectContent>
                             </Select>
-                          {/* explore button */}
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className="h-8 w-8 text-primary"
-                            onClick={() => handleExploreColumn(columnInfo)}
-                          >
-                            <ChartColumn className="h-4 w-4" />
-                          </Button>
                             
+                            {config?.method === 'impute_constant' && (
+                              <Input
+                                type={columnInfo?.type === 'numeric' ? 'number' : 'text'}
+                                placeholder="Enter constant value"
+                                className="w-[150px]"
+                                value={config.value || ''}
+                                onChange={(e) => handleConstantValueChange(columnName, e.target.value)}
+                              />
+                            )}
+                            
+                            {/* explore button */}
+                            <Button 
+                              variant="outline" 
+                              size="icon" 
+                              className="h-8 w-8 text-primary"
+                              onClick={() => handleExploreColumn(columnInfo)}
+                            >
+                              <ChartColumn className="h-4 w-4" />
+                            </Button>
+                              
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>

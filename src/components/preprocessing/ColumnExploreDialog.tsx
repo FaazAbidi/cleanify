@@ -95,6 +95,19 @@ export function ColumnExploreDialog({
                     <span className="font-medium">{column.outliers}</span>
                   </div>
                 )}
+                {column.skewness !== undefined && (
+                  <div className="flex flex-col p-3 bg-gray-50 rounded-md">
+                    <span className="text-sm text-gray-500">Skewness</span>
+                    <span className="font-medium">
+                      {column.skewness.toFixed(2)}
+                      {column.isSkewed && (
+                        <span className="ml-2 text-xs text-amber-600 font-normal">
+                          (Significant)
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                )}
               </>
             )}
             

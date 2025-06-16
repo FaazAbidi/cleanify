@@ -6,9 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Search, Eye, Info, ChartColumn } from 'lucide-react';
+import { Search, Eye, Info, ChartColumn, AlertTriangle } from 'lucide-react';
 import { ColumnExploreDialog } from './ColumnExploreDialog';
 import { DatasetType } from '@/types/dataset';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ColumnSelectorProps {
   columns: ColumnInfo[];
@@ -16,6 +17,7 @@ interface ColumnSelectorProps {
   onColumnSelectionChange: (selectedColumns: string[]) => void;
   disabledColumns?: string[];
   dataset?: DatasetType | null;
+  highlightedColumns?: string[];
 }
 
 export function ColumnSelector({
@@ -23,7 +25,8 @@ export function ColumnSelector({
   selectedColumns,
   onColumnSelectionChange,
   disabledColumns = [],
-  dataset = null
+  dataset = null,
+  highlightedColumns = []
 }: ColumnSelectorProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredColumns, setFilteredColumns] = useState<ColumnInfo[]>(columns);
@@ -82,7 +85,7 @@ export function ColumnSelector({
   };
 
   return (
-    <>
+    <TooltipProvider>
       <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-lg">Select Columns</CardTitle>
@@ -108,33 +111,59 @@ export function ColumnSelector({
             </div>
           </div>
           <div className="space-y-2 max-h-[300px] overflow-y-auto">
-            {filteredColumns.map(column => (
-              <div key={column.name} className="flex items-center justify-between p-2 hover:bg-accent rounded-md">
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id={`col-${column.name}`}
-                    checked={selectedColumns.includes(column.name)}
-                    onCheckedChange={(checked) => handleColumnToggle(column.name, checked === true)}
-                    disabled={disabledColumns.includes(column.name)}
-                  />
-                  <Label htmlFor={`col-${column.name}`} className="flex-1">
-                    {column.name}
-                  </Label>
+            {filteredColumns.map(column => {
+              const isHighlighted = highlightedColumns.includes(column.name);
+              
+              return (
+                <div 
+                  key={column.name} 
+                  className={`flex items-center justify-between p-2 hover:bg-accent rounded-md ${
+                    isHighlighted ? 'bg-amber-50 border-l-4 border-amber-400' : ''
+                  }`}
+                >
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`col-${column.name}`}
+                      checked={selectedColumns.includes(column.name)}
+                      onCheckedChange={(checked) => handleColumnToggle(column.name, checked === true)}
+                      disabled={disabledColumns.includes(column.name)}
+                    />
+                    <Label htmlFor={`col-${column.name}`} className="flex items-center space-x-1">
+                      <span>{column.name}</span>
+                      {isHighlighted && (
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <AlertTriangle className="h-4 w-4 text-amber-500" />
+                          </TooltipTrigger>
+                          <TooltipContent>Skewed column</TooltipContent>
+                        </Tooltip>
+                      )}
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="outline">{column.type}</Badge>
+                    {column.skewness !== undefined && (
+                      <Badge variant={column.isSkewed ? "destructive" : "secondary"}>
+                        Skew: {column.skewness.toFixed(2)}
+                      </Badge>
+                    )}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          className="h-8 w-8 text-primary"
+                          onClick={() => handleExploreColumn(column)}
+                        >
+                          <ChartColumn className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Explore {column.name}</TooltipContent>
+                    </Tooltip>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Badge variant="outline">{column.type}</Badge>
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
-                    className="h-8 w-8 text-primary"
-                    onClick={() => handleExploreColumn(column)}
-                    title={`Explore ${column.name}`}
-                  >
-                    <ChartColumn className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>
@@ -145,6 +174,6 @@ export function ColumnSelector({
         column={selectedColumnForExplore}
         dataset={dataset}
       />
-    </>
+    </TooltipProvider>
   );
 } 

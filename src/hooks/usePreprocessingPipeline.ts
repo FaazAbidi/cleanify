@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getErrorMessage } from '@/lib/utils';
 import { Tables } from '@/integrations/supabase/types';
 import { useAuth } from './useAuth';
+import { MethodConfig, MethodConfigWithTaskMethodId } from '@/types/methods';
 
 // Status types for preprocessing - must match the database enum values
 export type PreprocessingStatus = 'RUNNING' | 'RAW' | 'PROCESSED' | 'FAILED';
