@@ -1,0 +1,196 @@
+import { useState, useEffect, useMemo } from 'react';
+import { ColumnInfo, DatasetType } from '@/types/dataset';
+import { ColumnSelector } from './ColumnSelector';
+import { BinningMethodSelector } from './BinningMethodSelector';
+import { useBinningConfig } from '@/hooks/useBinningConfig';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle, Info, BarChart3 } from 'lucide-react';
+
+interface BinningHandlerProps {
+  dataset: DatasetType | null;
+  onSubmit: (payload: any) => void;
+  onCancel: () => void;
+  isLoading?: boolean;
+}
+
+export function BinningHandler({
+  dataset,
+  onSubmit,
+  onCancel,
+  isLoading = false
+}: BinningHandlerProps) {
+  const [activeTab, setActiveTab] = useState<string>('column-selection');
+  const [initialSelectionDone, setInitialSelectionDone] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [supportedColumns, setSupportedColumns] = useState<ColumnInfo[]>([]);
+  
+  const {
+    selectedColumns,
+    setSelectedColumns,
+    columnConfigurations,
+    updateColumnConfiguration,
+    generatePayload
+  } = useBinningConfig({ dataset });
+
+  // When dataset changes, set as loaded
+  useEffect(() => {
+    if (dataset) {
+      setIsLoaded(true);
+    }
+  }, [dataset]);
+
+  // Handle tab change
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
+
+  // Handle form submission
+  const handleSubmit = () => {
+    const payload = generatePayload();
+    if (payload) {
+      console.log(payload);
+      onSubmit(payload);
+    }
+  };
+
+  // Get columns with supported types for binning (only numeric)
+  const columnsWithSupportedTypes = useMemo(() => {
+    if (!dataset) {
+      return [];
+    }
+    
+    // Filter for columns that are numeric
+    return dataset.columns
+      .filter(column => column.type === 'numeric')
+      .map(column => column.name);
+  }, [dataset]);
+
+  const hasSupportedColumns = columnsWithSupportedTypes.length > 0;
+  const hasSelectedColumns = selectedColumns.length > 0;
+
+  // Pre-select all numeric columns on initial load
+  useEffect(() => {
+    if (hasSupportedColumns && !initialSelectionDone && isLoaded) {
+      setSelectedColumns(columnsWithSupportedTypes);
+      setInitialSelectionDone(true);
+      setSupportedColumns(dataset.columns.filter(col => columnsWithSupportedTypes.includes(col.name)));
+    }
+  }, [hasSupportedColumns, columnsWithSupportedTypes, setSelectedColumns, initialSelectionDone, isLoaded, dataset]);
+
+  if (!isLoaded) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Binning</CardTitle>
+          <CardDescription>
+            Transform continuous numeric columns into categorical bins for better analysis.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="py-8 text-center">
+            <p>Loading dataset information...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="w-full">
+      <Alert className='mb-4 bg-blue-50'>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          <p>Binning transforms continuous numbers into easy-to-read buckets:</p>
+          <ul className="list-disc pl-5 mt-2">
+            <li>Convert numeric columns into categorical ranges (bins)</li>
+            <li>Choose between equal-width (fixed range) or equal-depth (equal frequency) strategies</li>
+            <li>Specify the number of bins for each column</li>
+            <li>Original numeric columns are preserved alongside new binned columns</li>
+          </ul>
+        </AlertDescription>
+      </Alert>
+
+      <Alert className='mb-4 bg-green-50'>
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          Note that only numeric columns can be binned. We found {columnsWithSupportedTypes.length} numeric columns in your dataset.
+        </AlertDescription>
+      </Alert>
+        
+      {!hasSupportedColumns ? (
+        <div className="py-4">
+          <Alert className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              No numeric columns were found in this dataset. Binning requires numeric data.
+            </AlertDescription>
+          </Alert>
+          <div className="flex justify-end mt-4">
+            <Button variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
+          <TabsList className="mb-4">
+            <TabsTrigger value="column-selection">1. Select Columns</TabsTrigger>
+            <TabsTrigger 
+              value="method-configuration" 
+              disabled={!hasSelectedColumns}
+            >
+              2. Configure Binning
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="column-selection">
+            <ColumnSelector
+              columns={supportedColumns || []}
+              selectedColumns={selectedColumns}
+              onColumnSelectionChange={setSelectedColumns}
+              disabledColumns={[]} // All numeric columns can be selected
+              dataset={dataset}
+            />
+            
+            <div className="flex justify-between mt-6">
+              <Button variant="outline" onClick={onCancel}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => handleTabChange('method-configuration')} 
+                disabled={!hasSelectedColumns}
+              >
+                Next
+              </Button>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="method-configuration">
+            <BinningMethodSelector
+              dataset={dataset}
+              selectedColumns={selectedColumns}
+              columnDetails={dataset?.columns || []}
+              columnConfigurations={columnConfigurations}
+              onConfigChange={updateColumnConfiguration}
+            />
+            
+            <div className="flex justify-between mt-6">
+              <Button variant="outline" onClick={() => handleTabChange('column-selection')}>
+                Back
+              </Button>
+              <Button 
+                onClick={handleSubmit} 
+                disabled={!hasSelectedColumns || isLoading}
+              >
+                {isLoading ? 'Processing...' : 'Create a new version'}
+              </Button>
+            </div>
+          </TabsContent>
+        </Tabs>
+      )}
+    </div>
+  );
+} 

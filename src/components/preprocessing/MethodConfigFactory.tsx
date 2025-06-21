@@ -5,6 +5,13 @@ import { OutlierHandler } from './OutlierHandler';
 import { SkewnessHandler } from './SkewnessHandler';
 import { StandardizationHandler } from './StandardizationHandler';
 import { NormalizationHandler } from './NormalizationHandler';
+import { SamplingHandler } from './SamplingHandler';
+import { OneHotEncodingHandler } from './OneHotEncodingHandler';
+import { LabelEncodingHandler } from './LabelEncodingHandler';
+import { DropColumnsHandler } from './DropColumnsHandler';
+import { CombineFeaturesHandler } from './CombineFeaturesHandler';
+import { BinningHandler } from './BinningHandler';
+import { PCAHandler } from './PCAHandler';
 import { Loader2 } from 'lucide-react';
 import { Method } from '@/types/methods';
 
@@ -90,6 +97,69 @@ export function MethodConfigFactory({
     case 'perform_normalization':
       return (
         <NormalizationHandler
+          dataset={dataset}
+          onSubmit={onSubmit}
+          onCancel={onCancel}
+          isLoading={isLoading}
+        />
+      );
+    case 'perform_sampling':
+      return (
+        <SamplingHandler
+          dataset={dataset}
+          onSubmit={onSubmit}
+          onCancel={onCancel}
+          isLoading={isLoading}
+        />
+      );
+    case 'perform_one_hot_encoding':
+      return (
+        <OneHotEncodingHandler
+          dataset={dataset}
+          onSubmit={onSubmit}
+          onCancel={onCancel}
+          isLoading={isLoading}
+        />
+      );
+    case 'perform_label_encoding':
+      return (
+        <LabelEncodingHandler
+          dataset={dataset}
+          onSubmit={onSubmit}
+          onCancel={onCancel}
+          isLoading={isLoading}
+        />
+      );
+    case 'perform_drop_columns':
+      return (
+        <DropColumnsHandler
+          dataset={dataset}
+          onSubmit={onSubmit}
+          onCancel={onCancel}
+          isLoading={isLoading}
+        />
+      );
+    case 'perform_combine_features':
+      return (
+        <CombineFeaturesHandler
+          dataset={dataset}
+          onSubmit={onSubmit}
+          onCancel={onCancel}
+          isLoading={isLoading}
+        />
+      );
+    case 'perform_binning':
+      return (
+        <BinningHandler
+          dataset={dataset}
+          onSubmit={onSubmit}
+          onCancel={onCancel}
+          isLoading={isLoading}
+        />
+      );
+    case 'perform_pca_reduction':
+      return (
+        <PCAHandler
           dataset={dataset}
           onSubmit={onSubmit}
           onCancel={onCancel}
