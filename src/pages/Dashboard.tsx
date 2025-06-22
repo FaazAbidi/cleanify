@@ -70,15 +70,15 @@ const Dashboard = () => {
         <div className="space-y-8">
           {/* Activity Section */}
           <section>
-            <div className="flex items-center gap-2 mb-6">
-              <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <h2 className="text-xl font-semibold">Activity & Performance</h2>
+            <div className="flex items-center gap-2 mb-4 sm:mb-6">
+              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
+              <h2 className="text-lg sm:text-xl font-semibold">Activity & Performance</h2>
             </div>
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div className="lg:col-span-1">
+            <div className="grid gap-4 sm:gap-6 xl:grid-cols-2">
+              <div className="xl:col-span-1">
                 <ActivityChart tasks={tasks} />
               </div>
-              <div className="lg:col-span-1">
+              <div className="xl:col-span-1">
                 <PerformanceMetrics tasks={tasks} />
               </div>
             </div>

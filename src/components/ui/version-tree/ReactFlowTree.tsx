@@ -28,25 +28,13 @@ import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { RefreshCcw, ZoomIn, ZoomOut, GripVertical } from 'lucide-react';
 import { TaskVersion } from "@/types/version";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 // Custom node component
 function VersionNodeComponent({ data }: NodeProps) {
   const { node, onClick, isSelected, isLocallySelected } = data;
   const { version } = node;
   
-  // Status color mapping
-  const getStatusColor = (status: string | null) => {
-    const statusColors: Record<string, string> = {
-      RAW: "bg-yellow-100 text-yellow-800 dark:bg-yellow-950/20 dark:text-yellow-300",
-      PROCESSED: "bg-blue-100 text-blue-800 dark:bg-blue-950/20 dark:text-blue-300",
-      COMPLETED: "bg-green-100 text-green-800 dark:bg-green-950/20 dark:text-green-300",
-      ERROR: "bg-red-100 text-red-800 dark:bg-red-950/20 dark:text-red-300",
-      RUNNING: "bg-purple-100 text-purple-800 dark:bg-purple-950/20 dark:text-purple-300",
-      FAILED: "bg-red-100 text-red-800 dark:bg-red-950/20 dark:text-red-300"
-    };
-    return status ? statusColors[status] || "" : "";
-  };
-
   // Determine border styling based on selection type
   const getBorderStyle = () => {
     if (isSelected) {
@@ -78,9 +66,7 @@ function VersionNodeComponent({ data }: NodeProps) {
               <CardTitle className="text-sm font-medium truncate">
                 {version.name}
               </CardTitle>
-              <Badge className={`text-xs ${getStatusColor(version.status)} ml-2`}>
-                {version.status || "Unknown"}
-              </Badge>
+              <StatusBadge status={version.status || "Unknown"} size="sm" className="ml-2" />
             </div>
             <p className="text-xs text-muted-foreground">
               {version.created_at && 

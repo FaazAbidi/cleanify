@@ -25,38 +25,38 @@ const statusConfig: Record<
   { color: string; label: string; outlineColor: string }
 > = {
   PROCESSED: {
-    color: "bg-green-100 text-green-800 dark:bg-green-950/20 dark:text-green-300",
-    outlineColor: "border-green-500 text-green-700 bg-green-50 dark:border-green-800 dark:text-green-300 dark:bg-green-950/20",
+    color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200",
+    outlineColor: "border-green-500 text-green-700 bg-green-50 dark:border-green-600 dark:text-green-200 dark:bg-green-900/30",
     label: "Completed",
   },
   COMPLETED: {
-    color: "bg-green-100 text-green-800 dark:bg-green-950/20 dark:text-green-300",
-    outlineColor: "border-green-500 text-green-700 bg-green-50 dark:border-green-800 dark:text-green-300 dark:bg-green-950/20",
+    color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200",
+    outlineColor: "border-green-500 text-green-700 bg-green-50 dark:border-green-600 dark:text-green-200 dark:bg-green-900/30",
     label: "Completed",
   },
   RUNNING: {
-    color: "bg-blue-100 text-blue-800 dark:bg-blue-950/20 dark:text-blue-300",
-    outlineColor: "border-blue-500 text-blue-700 bg-blue-50 dark:border-blue-800 dark:text-blue-300 dark:bg-blue-950/20",
+    color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200",
+    outlineColor: "border-blue-500 text-blue-700 bg-blue-50 dark:border-blue-600 dark:text-blue-200 dark:bg-blue-900/30",
     label: "Processing",
   },
   PENDING: {
-    color: "bg-gray-100 text-gray-800 dark:bg-gray-950/20 dark:text-gray-300",
-    outlineColor: "border-gray-500 text-gray-700 bg-gray-50 dark:border-gray-800 dark:text-gray-300 dark:bg-gray-950/20",
+    color: "bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-200",
+    outlineColor: "border-gray-500 text-gray-700 bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:bg-gray-800/50",
     label: "Pending",
   },
   FAILED: {
-    color: "bg-red-100 text-red-800 dark:bg-red-950/20 dark:text-red-300",
-    outlineColor: "border-red-500 text-red-700 bg-red-50 dark:border-red-800 dark:text-red-300 dark:bg-red-950/20",
+    color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200",
+    outlineColor: "border-red-500 text-red-700 bg-red-50 dark:border-red-600 dark:text-red-200 dark:bg-red-900/30",
     label: "Failed",
   },
   ERROR: {
-    color: "bg-red-100 text-red-800 dark:bg-red-950/20 dark:text-red-300",
-    outlineColor: "border-red-500 text-red-700 bg-red-50 dark:border-red-800 dark:text-red-300 dark:bg-red-950/20",
+    color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200",
+    outlineColor: "border-red-500 text-red-700 bg-red-50 dark:border-red-600 dark:text-red-200 dark:bg-red-900/30",
     label: "Error",
   },
   RAW: {
-    color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-950/20 dark:text-yellow-300",
-    outlineColor: "border-yellow-500 text-yellow-700 bg-yellow-50 dark:border-yellow-800 dark:text-yellow-300 dark:bg-yellow-950/20",
+    color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200",
+    outlineColor: "border-yellow-500 text-yellow-700 bg-yellow-50 dark:border-yellow-600 dark:text-yellow-200 dark:bg-yellow-900/30",
     label: "Raw",
   },
 };
@@ -70,8 +70,8 @@ export function StatusBadge({
   ...props
 }: StatusBadgeProps) {
   const config = statusConfig[status] || {
-    color: "bg-gray-100 text-gray-800",
-    outlineColor: "border-gray-500 text-gray-700 bg-gray-50",
+    color: "bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-200",
+    outlineColor: "border-gray-500 text-gray-700 bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:bg-gray-800/50",
     label: status,
   };
 
