@@ -47,16 +47,16 @@ const Dashboard = () => {
 
   return (
     <AppSidebar>
-      <div className="space-y-8">
+      <div className="space-y-8 max-w-full overflow-hidden">
         {/* Welcome Section */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-bold text-primary">
+            <h1 className="text-2xl sm:text-3xl font-bold text-primary">
               Welcome back, {welcomeName}!
             </h1>
-            <Sparkles className="h-6 w-6 text-yellow-500" />
+            <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-500" />
           </div>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground text-base sm:text-lg">
             Here's an overview of your data preprocessing activities and insights.
           </p>
         </div>
@@ -69,16 +69,16 @@ const Dashboard = () => {
         {/* Main Content Grid */}
         <div className="space-y-8">
           {/* Activity Section */}
-          <section>
+          <section className="w-full">
             <div className="flex items-center gap-2 mb-4 sm:mb-6">
               <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
               <h2 className="text-lg sm:text-xl font-semibold">Activity & Performance</h2>
             </div>
-            <div className="grid gap-4 sm:gap-6 xl:grid-cols-2">
-              <div className="xl:col-span-1">
+            <div className="grid gap-4 sm:gap-6 2xl:grid-cols-2 w-full">
+              <div className="2xl:col-span-1 min-w-0">
                 <ActivityChart tasks={tasks} />
               </div>
-              <div className="xl:col-span-1">
+              <div className="2xl:col-span-1 min-w-0">
                 <PerformanceMetrics tasks={tasks} />
               </div>
             </div>

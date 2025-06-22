@@ -20,7 +20,7 @@ export const ActivityChart = ({ tasks }: ActivityChartProps) => {
       if (width < 640) setScreenSize('sm');
       else if (width < 768) setScreenSize('md');
       else if (width < 1024) setScreenSize('lg');
-      else if (width < 1280) setScreenSize('xl'); // Add xl breakpoint for better 1024px+ handling
+      else if (width < 1280) setScreenSize('xl');
       else setScreenSize('2xl');
     };
 
@@ -96,21 +96,11 @@ export const ActivityChart = ({ tasks }: ActivityChartProps) => {
   const trendPercentage = previousTotal > 0 ? Math.abs(((recentTotal - previousTotal) / previousTotal) * 100) : 0;
 
   // Responsive configurations
-  const getChartHeight = () => {
-    switch (screenSize) {
-      case 'sm': return 'h-[250px]';
-      case 'md': return 'h-[280px]';
-      case 'lg': return 'h-[300px]'; // Slightly reduce for better fit
-      case 'xl': return 'h-[320px]';
-      default: return 'h-[350px]';
-    }
-  };
-
   const getChartMargins = () => {
     switch (screenSize) {
       case 'sm': return { top: 5, right: 5, left: 5, bottom: 20 };
       case 'md': return { top: 8, right: 10, left: 8, bottom: 25 };
-      case 'lg': return { top: 10, right: 15, left: 10, bottom: 30 }; // Increase bottom margin
+      case 'lg': return { top: 10, right: 15, left: 10, bottom: 30 };
       case 'xl': return { top: 10, right: 20, left: 10, bottom: 25 };
       default: return { top: 15, right: 25, left: 15, bottom: 20 };
     }
@@ -126,7 +116,7 @@ export const ActivityChart = ({ tasks }: ActivityChartProps) => {
     switch (screenSize) {
       case 'sm': return 3;
       case 'md': return 2;
-      case 'lg': return 2; // Change from 1 to 2 to prevent overlap at 1024px
+      case 'lg': return 2;
       case 'xl': return 1;
       default: return 1;
     }
@@ -141,7 +131,7 @@ export const ActivityChart = ({ tasks }: ActivityChartProps) => {
       };
     } else if (screenSize === 'lg') {
       return {
-        angle: -25, // Slight angle for better readability at 1024px
+        angle: -25,
         textAnchor: 'end' as const,
         height: 45,
       };
@@ -194,7 +184,7 @@ export const ActivityChart = ({ tasks }: ActivityChartProps) => {
         </div>
       </CardHeader>
       <CardContent className="pb-2">
-        <ChartContainer config={chartConfig} className={`${getChartHeight()} w-full`}>
+        <ChartContainer config={chartConfig} className="w-full aspect-[4/3] min-h-[250px] max-h-[400px]">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart 
               data={last14Days} 
