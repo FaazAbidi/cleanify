@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { DatasetType, ColumnInfo } from "@/types/dataset";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +8,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 interface ColumnAnalysisProps {
   dataset: DatasetType;
@@ -44,7 +44,7 @@ export const ColumnAnalysis = ({ dataset }: ColumnAnalysisProps) => {
 
   const dataTypeColors = {
     numeric: "#0EA5E9", // Blue
-    categorical: "#10B981", // Green
+    categorical: "#10B981", // Green  
     datetime: "#8B5CF6", // Purple
     text: "#F97316", // Orange
     boolean: "#EAB308", // Yellow
@@ -74,51 +74,51 @@ export const ColumnAnalysis = ({ dataset }: ColumnAnalysisProps) => {
   );
 
   const renderColumnDetails = () => {
-    if (!selectedColumnInfo) return <div className="text-gray-500">Select a column to view details</div>;
+    if (!selectedColumnInfo) return <div className="text-muted-foreground">Select a column to view details</div>;
     
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col p-3 bg-gray-50 rounded-md">
-            <span className="text-sm text-gray-500">Type</span>
-            <span className="font-medium capitalize">{selectedColumnInfo.type}</span>
+          <div className="flex flex-col p-3 bg-muted rounded-md">
+            <span className="text-sm text-muted-foreground">Type</span>
+            <span className="font-medium capitalize text-foreground">{selectedColumnInfo.type}</span>
           </div>
-          <div className="flex flex-col p-3 bg-gray-50 rounded-md">
-            <span className="text-sm text-gray-500">Unique Values</span>
-            <span className="font-medium">{selectedColumnInfo.uniqueValues}</span>
+          <div className="flex flex-col p-3 bg-muted rounded-md">
+            <span className="text-sm text-muted-foreground">Unique Values</span>
+            <span className="font-medium text-foreground">{selectedColumnInfo.uniqueValues}</span>
           </div>
-          <div className="flex flex-col p-3 bg-gray-50 rounded-md">
-            <span className="text-sm text-gray-500">Missing Values</span>
-            <span className="font-medium">{selectedColumnInfo.missingValues} ({selectedColumnInfo.missingPercent.toFixed(1)}%)</span>
+          <div className="flex flex-col p-3 bg-muted rounded-md">
+            <span className="text-sm text-muted-foreground">Missing Values</span>
+            <span className="font-medium text-foreground">{selectedColumnInfo.missingValues} ({selectedColumnInfo.missingPercent.toFixed(1)}%)</span>
           </div>
           
           {selectedColumnInfo.type === 'numeric' && (
             <>
-              <div className="flex flex-col p-3 bg-gray-50 rounded-md">
-                <span className="text-sm text-gray-500">Range</span>
-                <span className="font-medium">{selectedColumnInfo.min} to {selectedColumnInfo.max}</span>
+              <div className="flex flex-col p-3 bg-muted rounded-md">
+                <span className="text-sm text-muted-foreground">Range</span>
+                <span className="font-medium text-foreground">{selectedColumnInfo.min} to {selectedColumnInfo.max}</span>
               </div>
-              <div className="flex flex-col p-3 bg-gray-50 rounded-md">
-                <span className="text-sm text-gray-500">Mean</span>
-                <span className="font-medium">{(selectedColumnInfo.mean || 0).toFixed(2)}</span>
+              <div className="flex flex-col p-3 bg-muted rounded-md">
+                <span className="text-sm text-muted-foreground">Mean</span>
+                <span className="font-medium text-foreground">{(selectedColumnInfo.mean || 0).toFixed(2)}</span>
               </div>
-              <div className="flex flex-col p-3 bg-gray-50 rounded-md">
-                <span className="text-sm text-gray-500">Standard Deviation</span>
-                <span className="font-medium">{(selectedColumnInfo.std || 0).toFixed(2)}</span>
+              <div className="flex flex-col p-3 bg-muted rounded-md">
+                <span className="text-sm text-muted-foreground">Standard Deviation</span>
+                <span className="font-medium text-foreground">{(selectedColumnInfo.std || 0).toFixed(2)}</span>
               </div>
               {selectedColumnInfo.outliers !== undefined && (
-                <div className="flex flex-col p-3 bg-gray-50 rounded-md">
-                  <span className="text-sm text-gray-500">Outliers</span>
-                  <span className="font-medium">{selectedColumnInfo.outliers}</span>
+                <div className="flex flex-col p-3 bg-muted rounded-md">
+                  <span className="text-sm text-muted-foreground">Outliers</span>
+                  <span className="font-medium text-foreground">{selectedColumnInfo.outliers}</span>
                 </div>
               )}
             </>
           )}
           
           {selectedColumnInfo.type === 'categorical' && selectedColumnInfo.mode && (
-            <div className="flex flex-col p-3 bg-gray-50 rounded-md">
-              <span className="text-sm text-gray-500">Most Common Value</span>
-              <span className="font-medium">{selectedColumnInfo.mode}</span>
+            <div className="flex flex-col p-3 bg-muted rounded-md">
+              <span className="text-sm text-muted-foreground">Most Common Value</span>
+              <span className="font-medium text-foreground">{selectedColumnInfo.mode}</span>
             </div>
           )}
         </div>
@@ -127,49 +127,69 @@ export const ColumnAnalysis = ({ dataset }: ColumnAnalysisProps) => {
           <div>
             <div className="text-sm font-medium mb-2">Value Distribution</div>
             <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                {selectedColumnInfo.type === 'numeric' ? (
-                  <BarChart data={distributionData}>
-                    <XAxis 
-                      dataKey="name" 
-                      tick={{ fontSize: 12 }}
-                      tickFormatter={(val) => Number(val).toFixed(1)}
-                    />
-                    <YAxis />
-                    <Tooltip 
-                      formatter={(value) => [value, "Count"]}
-                      labelFormatter={(label) => `Value: ${Number(label).toFixed(2)}`}
-                    />
-                    <Bar 
-                      dataKey="value" 
-                      fill={dataTypeColors[selectedColumnInfo.type]}
-                    />
-                  </BarChart>
-                ) : (
-                  <PieChart>
-                    <Pie
-                      data={distributionData.slice(0, 10)} // Limit to top 10 categories
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      labelLine={false}
-                      label={({ name, percent }) => 
-                        `${name.length > 15 ? name.substring(0, 15) + '...' : name} ${(percent * 100).toFixed(0)}%`
-                      }
-                    >
-                      {distributionData.slice(0, 10).map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => [value, "Count"]} />
-                  </PieChart>
-                )}
-              </ResponsiveContainer>
+              <ChartContainer
+                config={{
+                  value: {
+                    label: "Count",
+                    color: dataTypeColors[selectedColumnInfo.type],
+                  },
+                }}
+                className="h-full w-full"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  {selectedColumnInfo.type === 'numeric' ? (
+                    <BarChart data={distributionData}>
+                      <XAxis 
+                        dataKey="name" 
+                        tick={{ fontSize: 12 }}
+                        tickFormatter={(val) => Number(val).toFixed(1)}
+                      />
+                      <YAxis />
+                      <ChartTooltip 
+                        content={
+                          <ChartTooltipContent 
+                            formatter={(value) => [value, "Count"]}
+                            labelFormatter={(label) => `Value: ${Number(label).toFixed(2)}`}
+                          />
+                        }
+                      />
+                      <Bar 
+                        dataKey="value" 
+                        fill={dataTypeColors[selectedColumnInfo.type]}
+                      />
+                    </BarChart>
+                  ) : (
+                    <PieChart>
+                      <Pie
+                        data={distributionData.slice(0, 10)} // Limit to top 10 categories
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        labelLine={false}
+                        label={({ name, percent }) => 
+                          `${name.length > 15 ? name.substring(0, 15) + '...' : name} ${(percent * 100).toFixed(0)}%`
+                        }
+                      >
+                        {distributionData.slice(0, 10).map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <ChartTooltip 
+                        content={
+                          <ChartTooltipContent 
+                            formatter={(value) => [value, "Count"]}
+                          />
+                        }
+                      />
+                    </PieChart>
+                  )}
+                </ResponsiveContainer>
+              </ChartContainer>
             </div>
             {selectedColumnInfo.type === 'categorical' && distributionData.length > 10 && (
-              <div className="text-xs text-gray-500 text-center mt-2">
+              <div className="text-xs text-muted-foreground text-center mt-2">
                 Showing top 10 of {distributionData.length} categories
               </div>
             )}
@@ -186,7 +206,7 @@ export const ColumnAnalysis = ({ dataset }: ColumnAnalysisProps) => {
           <CardTitle className="text-lg">Columns</CardTitle>
           <div className="space-y-2">
             <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search columns..."
                 className="pl-8"

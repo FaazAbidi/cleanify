@@ -98,9 +98,9 @@ export function VersionDiffVisualizations({
 
       setCalculationProgress(30);
       
-      // Column-level comparisons
-      const baseColumns = new Map(dataset.columns.map(col => [col.name, col]));
-      const compareColumns = new Map(compareDataset.columns.map(col => [col.name, col]));
+      // Column-level comparisons - clean column names to handle carriage returns
+      const baseColumns = new Map(dataset.columns.map(col => [col.name.trim(), col]));
+      const compareColumns = new Map(compareDataset.columns.map(col => [col.name.trim(), col]));
       
       // All column names from both datasets
       const allColumnNames = new Set([

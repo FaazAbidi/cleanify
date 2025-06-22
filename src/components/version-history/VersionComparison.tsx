@@ -126,7 +126,7 @@ export function VersionComparison({
             </div>
             
             <div className="flex items-center">
-              <span className="mx-4">vs</span>
+              <span className="mx-4 mt-6 font-bold">vs</span>
             </div>
             
             <div className="flex-1">

@@ -108,7 +108,7 @@ export function OneHotEncodingHandler({
 
   return (
     <div className="w-full">
-      <Alert className='mb-4 bg-blue-50'>
+      <Alert className='mb-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800'>
         <Info className="h-4 w-4" />
         <AlertDescription>
           <p>One-Hot Encoding transforms categorical data into a binary format:</p>
@@ -121,7 +121,7 @@ export function OneHotEncodingHandler({
         </AlertDescription>
       </Alert>
 
-      <Alert className='mb-4 bg-green-50'>
+      <Alert className='mb-4 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800'>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
           Note that only categorical columns can be one-hot encoded. We found {columnsWithSupportedTypes.length} categorical columns in your dataset.
@@ -204,7 +204,7 @@ export function OneHotEncodingHandler({
                     })}
                   </div>
 
-                  <Alert className="bg-amber-50">
+                  <Alert className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
                     <Info className="h-4 w-4" />
                     <AlertDescription>
                       <div className="font-medium mb-2">Encoding Summary:</div>
@@ -216,7 +216,7 @@ export function OneHotEncodingHandler({
                     </AlertDescription>
                   </Alert>
 
-                  <div className="mt-6 p-4 bg-yellow-50 rounded-md">
+                  <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
                     <h4 className="font-medium mb-2">Important Notes:</h4>
                     <ul className="list-disc pl-6 text-sm space-y-1">
                       <li>This process significantly increases the number of columns in your dataset</li>

@@ -23,7 +23,7 @@ export const DataInsights = ({ tasks }: DataInsightsProps) => {
       value: `${Math.round(successRate)}%`,
       progress: successRate,
       icon: TrendingUp,
-      color: "text-green-600",
+      color: "text-green-600 dark:text-green-400",
       progressColor: "bg-green-500",
     },
     {
@@ -31,7 +31,7 @@ export const DataInsights = ({ tasks }: DataInsightsProps) => {
       value: runningTasks,
       progress: totalTasks > 0 ? (runningTasks / totalTasks) * 100 : 0,
       icon: Database,
-      color: "text-blue-600",
+      color: "text-blue-600 dark:text-blue-400",
       progressColor: "bg-blue-500",
     },
     {
@@ -39,7 +39,7 @@ export const DataInsights = ({ tasks }: DataInsightsProps) => {
       value: `${Math.round(failureRate)}%`,
       progress: failureRate,
       icon: AlertTriangle,
-      color: "text-red-600",
+      color: "text-red-600 dark:text-red-400",
       progressColor: "bg-red-500",
     },
   ];

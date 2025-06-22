@@ -132,7 +132,7 @@ export function MissingDataHandler({
   return (
     <div className="w-full">
 
-      <Alert className='mb-4 bg-green-50'>
+      <Alert className='mb-4 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800'>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
           Note that only columns with missing values and supported types will be shown. Supported types are <strong>numeric</strong> and <strong>categorical</strong>.

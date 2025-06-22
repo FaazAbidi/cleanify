@@ -135,7 +135,7 @@ export const DataTypeManager = ({ dataset, onDatasetUpdate }: DataTypeManagerPro
       </CardHeader>
       <CardContent>
         <div className="relative mb-4">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search columns..."
             className="pl-8"
@@ -145,7 +145,7 @@ export const DataTypeManager = ({ dataset, onDatasetUpdate }: DataTypeManagerPro
         </div>
 
         {displayedColumns.length === 0 ? (
-          <div className="text-center py-4 text-gray-500">
+          <div className="text-center py-4 text-muted-foreground">
             No columns found matching "{search}"
           </div>
         ) : (
@@ -197,25 +197,30 @@ export const DataTypeManager = ({ dataset, onDatasetUpdate }: DataTypeManagerPro
 
         {totalPages > 1 && (
           <div className="flex justify-between items-center mt-6">
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-muted-foreground">
               Showing {startIdx + 1} to {Math.min(startIdx + columnsPerPage, filteredColumns.length)} of{" "}
               {filteredColumns.length} columns
             </div>
             <div className="flex gap-2">
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-1 text-sm rounded-md border disabled:opacity-50"
               >
                 Previous
-              </button>
-              <button
+              </Button>
+              <span className="px-3 py-1 text-sm text-muted-foreground">
+                {page} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="px-3 py-1 text-sm rounded-md border disabled:opacity-50"
               >
                 Next
-              </button>
+              </Button>
             </div>
           </div>
         )}

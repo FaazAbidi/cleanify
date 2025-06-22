@@ -101,7 +101,7 @@ export function StandardizationHandler({
 
   return (
     <div className="w-full">
-      <Alert className='mb-4 bg-blue-50'>
+      <Alert className='mb-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800'>
         <Info className="h-4 w-4" />
         <AlertDescription>
           <p>Standardization transforms your numeric data to have zero mean and unit variance:</p>
@@ -113,7 +113,7 @@ export function StandardizationHandler({
         </AlertDescription>
       </Alert>
 
-      <Alert className='mb-4 bg-green-50'>
+      <Alert className='mb-4 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800'>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
           Note that only numeric columns can be standardized. We found {columnsWithSupportedTypes.length} numeric columns in your dataset.
@@ -194,7 +194,7 @@ export function StandardizationHandler({
                     })}
                   </div>
 
-                  <div className="mt-6 p-4 bg-yellow-50 rounded-md">
+                  <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
                     <h4 className="font-medium mb-2">Important Notes:</h4>
                     <ul className="list-disc pl-6 text-sm space-y-1">
                       <li>Standardization centers values around 0, with most values falling between -3 and +3</li>

@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { getCorrelationColor, getCorrelationDescription } from "@/lib/correlation-utils";
+import { useDarkMode } from "@/hooks/useDarkMode";
 
 interface TopCorrelationsListProps {
   correlationMessage: string;
@@ -24,6 +25,7 @@ export function TopCorrelationsList({
   onTargetColumnChange,
   onFilterChange,
 }: TopCorrelationsListProps) {
+  const { isDarkMode } = useDarkMode();
   return (
     <Card>
       <CardHeader>
@@ -65,7 +67,7 @@ export function TopCorrelationsList({
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {heatmapData.slice(0, 10).map((item, index) => {
-              const backgroundColor = getCorrelationColor(item.value);
+              const backgroundColor = getCorrelationColor(item.value, isDarkMode);
               const description = getCorrelationDescription(item.value);
               
               return (

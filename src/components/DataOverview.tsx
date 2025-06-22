@@ -1,6 +1,7 @@
 import { DatasetType } from "@/types/dataset";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ScatterChart, Scatter, ZAxis } from "recharts";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, ScatterChart, Scatter, ZAxis } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { ChartBarBig, FileText, AlertTriangle, TableProperties, TrendingUp, Target, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatBytes } from "@/lib/format";
@@ -58,25 +59,25 @@ export const DataOverview = ({ dataset, onSelectColumn }: DataOverviewProps) => 
           <div className="space-y-4">
             <div className="flex justify-between items-center pb-2 border-b">
               <span className="font-medium">Filename</span>
-              <span className="text-gray-700">{dataset.filename}</span>
+              <span className="text-foreground">{dataset.filename}</span>
             </div>
             <div className="flex justify-between items-center pb-2 border-b">
               <span className="font-medium">Number of Rows</span>
-              <span className="text-gray-700">{dataset.rows.toLocaleString()}</span>
+              <span className="text-foreground">{dataset.rows.toLocaleString()}</span>
             </div>
             <div className="flex justify-between items-center pb-2 border-b">
               <span className="font-medium">Number of Columns</span>
-              <span className="text-gray-700">{dataset.columns.length.toLocaleString()}</span>
+              <span className="text-foreground">{dataset.columns.length.toLocaleString()}</span>
             </div>
             <div className="flex justify-between items-center pb-2 border-b">
               <span className="font-medium">Memory Usage (est.)</span>
-              <span className="text-gray-700">
+              <span className="text-foreground">
                 {formatBytes(dataset.rows * dataset.columns.length * 8)}
               </span>
             </div>
             
             {dataset.missingValuesCount > 0 && (
-              <div className="flex items-center mt-4 text-gray-700">
+              <div className="flex items-center mt-4 text-foreground">
                 <AlertTriangle className="h-5 w-5 mr-2 text-amber-500" />
                 <span>
                   {((dataset.missingValuesCount / (dataset.rows * dataset.columns.length)) * 100).toFixed(2)}% of 
@@ -86,7 +87,7 @@ export const DataOverview = ({ dataset, onSelectColumn }: DataOverviewProps) => 
             )}
             
             {dataset.duplicateRowsCount > 0 && (
-              <div className="flex items-center mt-2 text-gray-700">
+              <div className="flex items-center mt-2 text-foreground">
                 <AlertTriangle className="h-5 w-5 mr-2 text-amber-500" />
                 <span>
                   {((dataset.duplicateRowsCount / dataset.rows) * 100).toFixed(2)}% of
@@ -104,25 +105,35 @@ export const DataOverview = ({ dataset, onSelectColumn }: DataOverviewProps) => 
         </CardHeader>
         <CardContent>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={dataTypeData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                >
-                  {dataTypeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={dataTypeColors[entry.name as keyof typeof dataTypeColors]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            <ChartContainer
+              config={{
+                value: {
+                  label: "Count",
+                  color: "hsl(var(--chart-1))",
+                },
+              }}
+              className="h-full w-full"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={dataTypeData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {dataTypeData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={dataTypeColors[entry.name as keyof typeof dataTypeColors]} />
+                    ))}
+                  </Pie>
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </ChartContainer>
           </div>
           
           <div className="flex flex-wrap gap-2 mt-4">
@@ -148,18 +159,28 @@ export const DataOverview = ({ dataset, onSelectColumn }: DataOverviewProps) => 
         </CardHeader>
         <CardContent>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dataQualityData}>
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value">
-                  {dataQualityData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <ChartContainer
+              config={{
+                value: {
+                  label: "Count",
+                  color: "hsl(var(--chart-1))",
+                },
+              }}
+              className="h-full w-full"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dataQualityData}>
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="value">
+                    {dataQualityData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
           </div>
         </CardContent>
       </Card>
