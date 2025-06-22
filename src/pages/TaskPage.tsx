@@ -5,7 +5,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/use-toast";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, FileText } from "lucide-react";
 import { useTask } from "@/hooks/useTask";
 import { useTaskData } from "@/hooks/useTaskData";
 import { useTaskVersions } from "@/hooks/useTaskVersions";
@@ -212,38 +212,38 @@ const TaskPage = () => {
         <div className="w-full">
           <Breadcrumbs items={breadcrumbItems} />
           
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => navigate("/tasks")}
-                className="mr-2"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <h1 className="text-2xl font-bold">{task?.name || "Task Details"}</h1>
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">{task?.name || "Task Details"}</h1>
+              <p className="text-muted-foreground mt-1">Manage and analyze your data preprocessing task</p>
             </div>
             
             {/* Add preprocessing status indicator */}
             {isProcessing && (
-              <div className="flex items-center text-amber-600">
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                <span className="text-sm">
-                  Preprocessing {processingVersion?.name}...
-                </span>
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                <Loader2 className="h-4 w-4 text-amber-600 dark:text-amber-400 animate-spin" />
+                <div>
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-300">Processing in progress</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    {processingVersion?.name}
+                  </p>
+                </div>
               </div>
             )}
           </div>
           
-          <div className="w-full">
+          <div className="w-full space-y-6">
             {taskLoading ? (
               <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+                <div className="flex items-center gap-3">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
+                  <p className="text-muted-foreground">Loading task details...</p>
+                </div>
               </div>
             ) : task ? (
-              <div className="grid grid-cols-1 gap-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-8">
+                {/* Task Overview Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <TaskMetadata task={task} file={fileData} />
                   
                   <TaskVersionSelector 
@@ -254,11 +254,18 @@ const TaskPage = () => {
                   />
                 </div>
                 
-                <TaskVersionTabs ref={tabsRef} {...versionTabsProps} />
+                {/* Main Content Tabs */}
+                <div className="w-full">
+                  <TaskVersionTabs ref={tabsRef} {...versionTabsProps} />
+                </div>
               </div>
             ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Task not found</p>
+              <div className="text-center py-16">
+                <div className="p-6 rounded-lg bg-muted/30 border border-border/50 max-w-md mx-auto">
+                  <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Task Not Found</h3>
+                  <p className="text-muted-foreground">The requested task could not be found or you don't have permission to access it.</p>
+                </div>
               </div>
             )}
           </div>

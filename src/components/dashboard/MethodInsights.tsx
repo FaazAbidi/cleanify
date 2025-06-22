@@ -2,48 +2,62 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tables } from "@/integrations/supabase/types";
+import { TaskMethodStats } from "@/hooks/useTaskMethods";
 import { useMethods } from "@/hooks/useMethods";
 import { useCategories } from "@/hooks/useCategories";
 import { Wrench, TrendingUp, Activity, Zap } from "lucide-react";
 import { useMemo } from "react";
+import { formatDistanceToNow } from "date-fns";
 
 interface MethodInsightsProps {
   tasks: Tables<'Tasks'>[];
+  taskMethodStats: TaskMethodStats | null;
 }
 
-export const MethodInsights = ({ tasks }: MethodInsightsProps) => {
+export const MethodInsights = ({ tasks, taskMethodStats }: MethodInsightsProps) => {
   const { methods, loading: methodsLoading } = useMethods();
   const { categories, loading: categoriesLoading } = useCategories();
 
   const loading = methodsLoading || categoriesLoading;
 
-  // Transform categories data for display with usage statistics
+  // Transform categories data for display with real usage statistics
   const methodCategories = useMemo(() => {
-    if (!categories || categories.length === 0) return [];
+    if (!categories || categories.length === 0 || !taskMethodStats) return [];
 
-    return categories.map((category) => ({
-      name: category.name,
-      count: category.methods.length,
-      methods: category.methods,
-      // TODO: Replace with actual usage statistics from task versions
-      usage: Math.floor(Math.random() * 80) + 20, // Mock usage percentage for now
-      trend: Math.random() > 0.5 ? 'up' : 'down' // Mock trend for now
-    }));
-  }, [categories]);
+    return categories.map((category) => {
+      // Calculate usage for this category based on real data
+      const categoryMethodIds = category.methods.map(m => m.id);
+      const categoryUsage = taskMethodStats.methodUsage.filter(usage => 
+        categoryMethodIds.includes(usage.method_id)
+      );
+      
+      const totalUsage = categoryUsage.reduce((sum, usage) => sum + usage.usage_count, 0);
+      const totalPossibleUsage = taskMethodStats.totalVersions || 1;
+      const usagePercentage = Math.round((totalUsage / totalPossibleUsage) * 100);
+      
+      return {
+        name: category.name,
+        count: category.methods.length,
+        methods: category.methods,
+        usage: Math.min(usagePercentage, 100),
+        trend: usagePercentage > 50 ? 'up' : 'down'
+      };
+    });
+  }, [categories, taskMethodStats]);
 
   const topMethods = useMemo(() => {
-    if (!methods || methods.length === 0) return [];
+    if (!taskMethodStats?.methodUsage || taskMethodStats.methodUsage.length === 0) return [];
 
-    // Get all methods from all categories (enabled methods only)
-    const enabledMethods = methods.filter(method => method.is_enabled);
-    
-    // Mock usage data for top methods
-    return enabledMethods.slice(0, 5).map(method => ({
-      ...method,
-      usage: Math.floor(Math.random() * 100), // TODO: Replace with actual usage statistics
-      lastUsed: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000) // Mock last used date
+    // Use real usage data from TaskMethods
+    return taskMethodStats.methodUsage.slice(0, 5).map(methodUsage => ({
+      id: methodUsage.method_id,
+      label: methodUsage.method_name,
+      usage: Math.round(methodUsage.success_rate),
+      usage_count: methodUsage.usage_count,
+      lastUsed: new Date(methodUsage.last_used),
+      description: `Used ${methodUsage.usage_count} times`
     }));
-  }, [methods]);
+  }, [taskMethodStats]);
 
   if (loading) {
     return (
@@ -135,12 +149,12 @@ export const MethodInsights = ({ tasks }: MethodInsightsProps) => {
                       {method.label}
                     </p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {method.description}
+                      {method.description} • Last used {formatDistanceToNow(method.lastUsed, { addSuffix: true })}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium">{method.usage}%</p>
-                    <p className="text-xs text-muted-foreground">usage</p>
+                    <p className="text-xs text-muted-foreground">success rate</p>
                   </div>
                 </div>
               ))}
