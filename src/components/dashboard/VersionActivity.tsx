@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Progress } from "@/components/ui/progress";
 import { Tables } from "@/integrations/supabase/types";
 import { GitBranch, Clock, CheckCircle, XCircle, TrendingUp, Activity } from "lucide-react";
@@ -48,19 +49,6 @@ export const VersionActivity = ({ tasks }: VersionActivityProps) => {
         return <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />;
       default:
         return <Activity className="h-4 w-4 text-gray-600 dark:text-gray-400" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'PROCESSED':
-        return 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-300 dark:border-green-800';
-      case 'RUNNING':
-        return 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/20 dark:text-orange-300 dark:border-orange-800';
-      case 'FAILED':
-        return 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-300 dark:border-red-800';
-      default:
-        return 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-950/20 dark:text-gray-300 dark:border-gray-800';
     }
   };
 
@@ -155,9 +143,7 @@ export const VersionActivity = ({ tasks }: VersionActivityProps) => {
                       <span>{formatDistanceToNow(version.createdAt, { addSuffix: true })}</span>
                     </div>
                   </div>
-                  <Badge className={getStatusColor(version.status)}>
-                    {version.status}
-                  </Badge>
+                  <StatusBadge status={version.status} size="sm" />
                 </div>
               ))
             )}
