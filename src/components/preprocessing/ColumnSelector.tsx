@@ -118,7 +118,7 @@ export function ColumnSelector({
                 <div 
                   key={column.name} 
                   className={`flex items-center justify-between p-2 hover:bg-accent rounded-md ${
-                    isHighlighted ? 'bg-amber-50 border-l-4 border-amber-400' : ''
+                    isHighlighted ? 'bg-amber-50 dark:bg-amber-950/20 border-l-4 border-amber-400 dark:border-amber-500' : ''
                   }`}
                 >
                   <div className="flex items-center space-x-2">

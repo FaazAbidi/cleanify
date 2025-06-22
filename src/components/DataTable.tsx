@@ -73,7 +73,7 @@ export const DataTable = ({ dataset, highlightColumn }: DataTableProps) => {
     <div className="space-y-4 w-full">
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search columns..."
             className="pl-8"
@@ -82,7 +82,7 @@ export const DataTable = ({ dataset, highlightColumn }: DataTableProps) => {
           />
           {search && (
             <button 
-              className="absolute right-2.5 top-2.5 h-4 w-4 text-gray-500 hover:text-gray-700"
+              className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground hover:text-foreground"
               onClick={() => setSearch("")}
             >
               <X size={16} />
@@ -204,25 +204,30 @@ export const DataTable = ({ dataset, highlightColumn }: DataTableProps) => {
 
       {totalPages > 1 && (
         <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-muted-foreground">
             Showing {startIdx + 1} to {Math.min(startIdx + rowsPerPage, dataset.rawData.length)} of{" "}
             {dataset.rawData.length} rows
           </div>
           <div className="flex gap-2">
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-3 py-1 text-sm rounded-md border disabled:opacity-50"
             >
               Previous
-            </button>
-            <button
+            </Button>
+            <span className="px-3 py-1 text-sm text-muted-foreground">
+              {page} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="px-3 py-1 text-sm rounded-md border disabled:opacity-50"
             >
               Next
-            </button>
+            </Button>
           </div>
         </div>
       )}

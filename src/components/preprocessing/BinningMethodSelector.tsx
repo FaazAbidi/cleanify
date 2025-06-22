@@ -47,7 +47,7 @@ export function BinningMethodSelector({
 
   return (
     <div className="space-y-6">
-      <Alert className="bg-blue-50">
+      <Alert className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
         <Info className="h-4 w-4" />
         <AlertDescription>
           <p className="font-medium mb-2">Binning Strategies:</p>
@@ -138,7 +138,7 @@ export function BinningMethodSelector({
                       Bins: <span className="font-medium">{config.binCount}</span>
                     </div>
                     <div className="text-muted-foreground mt-1">
-                      New column: <span className="text-blue-600">Bin_{columnName}</span>
+                      New column: <span className="text-blue-600 dark:text-blue-400">Bin_{columnName}</span>
                     </div>
                   </div>
                 </div>
@@ -148,7 +148,7 @@ export function BinningMethodSelector({
         })}
       </div>
 
-      <Alert className="bg-yellow-50">
+      <Alert className="bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800">
         <Info className="h-4 w-4" />
         <AlertDescription>
           <div className="font-medium mb-2">Important Notes:</div>

@@ -139,7 +139,7 @@ export function SamplingHandler({
 
   return (
     <div className="w-full">
-      <Alert className='mb-4 bg-blue-50'>
+      <Alert className='mb-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800'>
         <Info className="h-4 w-4" />
         <AlertDescription>
           <p>Random sampling reduces your dataset size while preserving its main characteristics:</p>
@@ -151,7 +151,7 @@ export function SamplingHandler({
         </AlertDescription>
       </Alert>
 
-      <Alert className='mb-4 bg-green-50'>
+      <Alert className='mb-4 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800'>
         <Database className="h-4 w-4" />
         <AlertDescription>
           Your dataset currently has <strong>{dataset.rows.toLocaleString()}</strong> rows.
@@ -261,12 +261,12 @@ export function SamplingHandler({
                   </div>
                 </div>
 
-                <div className="p-4 bg-blue-50 rounded-md">
+                <div className="p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md">
                   <div className="font-medium mb-2">Sampling Method</div>
                   <div>Random Sampling</div>
                 </div>
 
-                <div className="p-4 bg-yellow-50 rounded-md">
+                <div className="p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
                   <h4 className="font-medium mb-2">Important Notes:</h4>
                   <ul className="list-disc pl-6 text-sm space-y-1">
                     <li>Sampling will create a new dataset version with fewer rows</li>

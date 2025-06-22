@@ -151,7 +151,7 @@ export function OutlierMethodSelector({
                       </p>
                     </div>
                     {outlierStats.count > 0 && (
-                      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                      <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800">
                         <AlertTriangle className="h-3 w-3 mr-1" />
                         {outlierStats.count} outliers
                       </Badge>

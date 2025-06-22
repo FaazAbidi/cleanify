@@ -81,7 +81,7 @@ export function PCAHandler({
 
   return (
     <div className="w-full">
-      <Alert className='mb-4 bg-blue-50'>
+      <Alert className='mb-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800'>
         <Info className="h-4 w-4" />
         <AlertDescription>
           <p>PCA intelligently reduces dataset dimensions while preserving essential patterns:</p>
@@ -94,7 +94,7 @@ export function PCAHandler({
         </AlertDescription>
       </Alert>
 
-             <Alert className='mb-4 bg-green-50'>
+             <Alert className='mb-4 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800'>
          <AlertCircle className="h-4 w-4" />
          <AlertDescription>
            Found {availableNumericColumns.length} numeric columns in your dataset. 
@@ -231,7 +231,7 @@ export function PCAHandler({
                      </p>
                    </div>
 
-                   <Alert className="bg-blue-50">
+                   <Alert className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
                      <Info className="h-4 w-4" />
                      <AlertDescription>
                        <div className="font-medium mb-2">How it works:</div>
@@ -290,7 +290,7 @@ export function PCAHandler({
                      </div>
                   </div>
 
-                  <Alert className="bg-blue-50">
+                  <Alert className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
                     <TrendingUp className="h-4 w-4" />
                     <AlertDescription>
                       <div className="font-medium mb-2">What will happen:</div>
@@ -304,7 +304,7 @@ export function PCAHandler({
                     </AlertDescription>
                   </Alert>
 
-                  <div className="mt-6 p-4 bg-yellow-50 rounded-md">
+                  <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
                     <h4 className="font-medium mb-2">Important Notes:</h4>
                     <ul className="list-disc pl-6 text-sm space-y-1">
                       <li>PCA creates new features that are linear combinations of original features</li>

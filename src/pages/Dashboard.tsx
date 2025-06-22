@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,8 +8,12 @@ import { ActivityChart } from "@/components/dashboard/ActivityChart";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { DataInsights } from "@/components/dashboard/DataInsights";
+import { MethodInsights } from "@/components/dashboard/MethodInsights";
+import { VersionActivity } from "@/components/dashboard/VersionActivity";
+import { PerformanceMetrics } from "@/components/dashboard/PerformanceMetrics";
 import { CreateTaskDialog } from "@/components/CreateTaskDialog";
-import { Loader2 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Loader2, Sparkles, TrendingUp } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 const Dashboard = () => {
@@ -44,56 +47,101 @@ const Dashboard = () => {
 
   return (
     <AppSidebar>
-      <div className="space-y-6">
+      <div className="space-y-8">
         {/* Welcome Section */}
-        <div>
-          <h1 className="text-3xl font-bold">Welcome back, {welcomeName}!</h1>
-          <p className="text-muted-foreground">
-            Here's an overview of your data preprocessing activities.
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold text-primary">
+              Welcome back, {welcomeName}!
+            </h1>
+            <Sparkles className="h-6 w-6 text-yellow-500" />
+          </div>
+          <p className="text-muted-foreground text-lg">
+            Here's an overview of your data preprocessing activities and insights.
           </p>
         </div>
 
         {/* Stats Overview */}
         <DashboardStats tasks={tasks} />
 
+        <Separator className="my-8" />
+
         {/* Main Content Grid */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {/* Activity Chart - spans 2 columns on larger screens */}
-          <div className="lg:col-span-2">
-            <ActivityChart tasks={tasks} />
-          </div>
+        <div className="space-y-8">
+          {/* Activity Section */}
+          <section>
+            <div className="flex items-center gap-2 mb-6">
+              <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <h2 className="text-xl font-semibold">Activity & Performance</h2>
+            </div>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="lg:col-span-1">
+                <ActivityChart tasks={tasks} />
+              </div>
+              <div className="lg:col-span-1">
+                <PerformanceMetrics tasks={tasks} />
+              </div>
+            </div>
+          </section>
 
-          {/* Data Insights */}
-          <DataInsights tasks={tasks} />
+          {/* Methods and Versions Section */}
+          <section>
+            <div className="flex items-center gap-2 mb-6">
+              <Sparkles className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              <h2 className="text-xl font-semibold">Methods & Versions</h2>
+            </div>
+            <div className="space-y-6">
+              <MethodInsights tasks={tasks} />
+              <VersionActivity tasks={tasks} />
+            </div>
+          </section>
 
-          {/* Recent Activity */}
-          <div className="lg:col-span-2">
+          {/* Insights and Activity Section */}
+          <section>
+            <div className="grid gap-6 lg:grid-cols-3">
+              {/* Data Insights - spans 2 columns */}
+              <div className="lg:col-span-2">
+                <DataInsights tasks={tasks} />
+              </div>
+
+              {/* Quick Actions - takes full right space */}
+              <div className="lg:col-span-1">
+                <QuickActions onUploadDataset={() => setIsTaskDialogOpen(true)} />
+              </div>
+            </div>
+          </section>
+
+          {/* Recent Activity in full width */}
+          <section>
             <RecentActivity tasks={tasks} />
-          </div>
-
-          {/* Quick Actions */}
-          <QuickActions onUploadDataset={() => setIsTaskDialogOpen(true)} />
+          </section>
         </div>
 
-        {/* Additional Info Card */}
+        {/* Getting Started Card */}
         {tasks.length === 0 && (
-          <Card className="border-dashed">
+          <Card className="border-dashed border-2 border-muted-foreground/25 bg-gradient-to-br from-blue-50/50 to-purple-50/50 dark:from-blue-950/20 dark:to-purple-950/20">
             <CardHeader className="text-center">
-              <CardTitle>Get Started with Data Preprocessing</CardTitle>
-              <CardDescription>
+              <CardTitle className="flex items-center justify-center gap-2">
+                <Sparkles className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                Get Started with Data Preprocessing
+              </CardTitle>
+              <CardDescription className="text-base">
                 Upload your first dataset to begin your data cleaning journey
               </CardDescription>
             </CardHeader>
-            <CardContent className="text-center">
-              <p className="text-muted-foreground mb-4">
+            <CardContent className="text-center space-y-4">
+              <p className="text-muted-foreground">
                 Transform messy data into clean, analysis-ready datasets with our powerful preprocessing tools.
               </p>
-              <button 
-                onClick={() => setIsTaskDialogOpen(true)}
-                className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
-              >
-                Upload Your First Dataset
-              </button>
+              <div className="flex justify-center gap-4">
+                <button 
+                  onClick={() => setIsTaskDialogOpen(true)}
+                  className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-6 py-2"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Upload Your First Dataset
+                </button>
+              </div>
             </CardContent>
           </Card>
         )}

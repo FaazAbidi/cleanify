@@ -9,9 +9,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { 
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
+  BarChart, Bar, XAxis, YAxis, ResponsiveContainer, 
   PieChart, Pie, Cell
 } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 interface ColumnExploreDialogProps {
   open: boolean;
@@ -62,46 +63,46 @@ export function ColumnExploreDialog({
         
         <div className="space-y-6 py-4">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="flex flex-col p-3 bg-gray-50 rounded-md">
-              <span className="text-sm text-gray-500">Type</span>
-              <span className="font-medium capitalize">{column.type}</span>
+            <div className="flex flex-col p-3 bg-muted rounded-md">
+              <span className="text-sm text-muted-foreground">Type</span>
+              <span className="font-medium capitalize text-foreground">{column.type}</span>
             </div>
-            <div className="flex flex-col p-3 bg-gray-50 rounded-md">
-              <span className="text-sm text-gray-500">Unique Values</span>
-              <span className="font-medium">{column.uniqueValues}</span>
+            <div className="flex flex-col p-3 bg-muted rounded-md">
+              <span className="text-sm text-muted-foreground">Unique Values</span>
+              <span className="font-medium text-foreground">{column.uniqueValues}</span>
             </div>
-            <div className="flex flex-col p-3 bg-gray-50 rounded-md">
-              <span className="text-sm text-gray-500">Missing Values</span>
-              <span className="font-medium">{column.missingValues} ({column.missingPercent.toFixed(1)}%)</span>
+            <div className="flex flex-col p-3 bg-muted rounded-md">
+              <span className="text-sm text-muted-foreground">Missing Values</span>
+              <span className="font-medium text-foreground">{column.missingValues} ({column.missingPercent.toFixed(1)}%)</span>
             </div>
             
             {column.type === 'numeric' && (
               <>
-                <div className="flex flex-col p-3 bg-gray-50 rounded-md">
-                  <span className="text-sm text-gray-500">Range</span>
-                  <span className="font-medium">{column.min} to {column.max}</span>
+                <div className="flex flex-col p-3 bg-muted rounded-md">
+                  <span className="text-sm text-muted-foreground">Range</span>
+                  <span className="font-medium text-foreground">{column.min} to {column.max}</span>
                 </div>
-                <div className="flex flex-col p-3 bg-gray-50 rounded-md">
-                  <span className="text-sm text-gray-500">Mean</span>
-                  <span className="font-medium">{(column.mean || 0).toFixed(2)}</span>
+                <div className="flex flex-col p-3 bg-muted rounded-md">
+                  <span className="text-sm text-muted-foreground">Mean</span>
+                  <span className="font-medium text-foreground">{(column.mean || 0).toFixed(2)}</span>
                 </div>
-                <div className="flex flex-col p-3 bg-gray-50 rounded-md">
-                  <span className="text-sm text-gray-500">Standard Deviation</span>
-                  <span className="font-medium">{(column.std || 0).toFixed(2)}</span>
+                <div className="flex flex-col p-3 bg-muted rounded-md">
+                  <span className="text-sm text-muted-foreground">Standard Deviation</span>
+                  <span className="font-medium text-foreground">{(column.std || 0).toFixed(2)}</span>
                 </div>
                 {column.outliers !== undefined && (
-                  <div className="flex flex-col p-3 bg-gray-50 rounded-md">
-                    <span className="text-sm text-gray-500">Outliers</span>
-                    <span className="font-medium">{column.outliers}</span>
+                  <div className="flex flex-col p-3 bg-muted rounded-md">
+                    <span className="text-sm text-muted-foreground">Outliers</span>
+                    <span className="font-medium text-foreground">{column.outliers}</span>
                   </div>
                 )}
                 {column.skewness !== undefined && (
-                  <div className="flex flex-col p-3 bg-gray-50 rounded-md">
-                    <span className="text-sm text-gray-500">Skewness</span>
-                    <span className="font-medium">
+                  <div className="flex flex-col p-3 bg-muted rounded-md">
+                    <span className="text-sm text-muted-foreground">Skewness</span>
+                    <span className="font-medium text-foreground">
                       {column.skewness.toFixed(2)}
                       {column.isSkewed && (
-                        <span className="ml-2 text-xs text-amber-600 font-normal">
+                        <span className="ml-2 text-xs text-amber-600 dark:text-amber-400 font-normal">
                           (Significant)
                         </span>
                       )}
@@ -112,9 +113,9 @@ export function ColumnExploreDialog({
             )}
             
             {column.type === 'categorical' && column.mode && (
-              <div className="flex flex-col p-3 bg-gray-50 rounded-md">
-                <span className="text-sm text-gray-500">Most Common Value</span>
-                <span className="font-medium">{column.mode}</span>
+              <div className="flex flex-col p-3 bg-muted rounded-md">
+                <span className="text-sm text-muted-foreground">Most Common Value</span>
+                <span className="font-medium text-foreground">{column.mode}</span>
               </div>
             )}
           </div>
@@ -123,49 +124,69 @@ export function ColumnExploreDialog({
             <div>
               <div className="text-sm font-medium mb-2">Value Distribution</div>
               <div className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  {column.type === 'numeric' ? (
-                    <BarChart data={distributionData}>
-                      <XAxis 
-                        dataKey="name" 
-                        tick={{ fontSize: 12 }}
-                        tickFormatter={(val) => Number(val).toFixed(1)}
-                      />
-                      <YAxis />
-                      <Tooltip 
-                        formatter={(value) => [value, "Count"]}
-                        labelFormatter={(label) => `Value: ${Number(label).toFixed(2)}`}
-                      />
-                      <Bar 
-                        dataKey="value" 
-                        fill={dataTypeColors[column.type]}
-                      />
-                    </BarChart>
-                  ) : (
-                    <PieChart>
-                      <Pie
-                        data={distributionData.slice(0, 10)} // Limit to top 10 categories
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={100}
-                        labelLine={false}
-                        label={({ name, percent }) => 
-                          `${name.length > 15 ? name.substring(0, 15) + '...' : name} ${(percent * 100).toFixed(0)}%`
-                        }
-                      >
-                        {distributionData.slice(0, 10).map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => [value, "Count"]} />
-                    </PieChart>
-                  )}
-                </ResponsiveContainer>
+                <ChartContainer
+                  config={{
+                    value: {
+                      label: "Count",
+                      color: dataTypeColors[column.type],
+                    },
+                  }}
+                  className="h-full w-full"
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    {column.type === 'numeric' ? (
+                      <BarChart data={distributionData}>
+                        <XAxis 
+                          dataKey="name" 
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={(val) => Number(val).toFixed(1)}
+                        />
+                        <YAxis />
+                        <ChartTooltip 
+                          content={
+                            <ChartTooltipContent 
+                              formatter={(value) => [value, "Count"]}
+                              labelFormatter={(label) => `Value: ${Number(label).toFixed(2)}`}
+                            />
+                          }
+                        />
+                        <Bar 
+                          dataKey="value" 
+                          fill={dataTypeColors[column.type]}
+                        />
+                      </BarChart>
+                    ) : (
+                      <PieChart>
+                        <Pie
+                          data={distributionData.slice(0, 10)} // Limit to top 10 categories
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={100}
+                          labelLine={false}
+                          label={({ name, percent }) => 
+                            `${name.length > 15 ? name.substring(0, 15) + '...' : name} ${(percent * 100).toFixed(0)}%`
+                          }
+                        >
+                          {distributionData.slice(0, 10).map((_, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <ChartTooltip 
+                          content={
+                            <ChartTooltipContent 
+                              formatter={(value) => [value, "Count"]}
+                            />
+                          }
+                        />
+                      </PieChart>
+                    )}
+                  </ResponsiveContainer>
+                </ChartContainer>
               </div>
               {column.type === 'categorical' && distributionData.length > 10 && (
-                <div className="text-xs text-gray-500 text-center mt-2">
+                <div className="text-xs text-muted-foreground text-center mt-2">
                   Showing top 10 of {distributionData.length} categories
                 </div>
               )}

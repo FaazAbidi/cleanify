@@ -103,7 +103,7 @@ export function InconsistencyHandler({
 
   return (
     <div className="w-full">
-      <Alert className='mb-4 bg-blue-50'>
+      <Alert className='mb-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800'>
         <Info className="h-4 w-4" />
         <AlertDescription>
           <p>This method identifies and fixes inconsistent values in your data:</p>
@@ -114,7 +114,7 @@ export function InconsistencyHandler({
         </AlertDescription>
       </Alert>
 
-      <Alert className='mb-4 bg-green-50'>
+      <Alert className='mb-4 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800'>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
           Note that only columns with numeric or categorical data types are supported for inconsistency fixing.

@@ -100,7 +100,7 @@ export function BinningHandler({
 
   return (
     <div className="w-full">
-      <Alert className='mb-4 bg-blue-50'>
+      <Alert className='mb-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800'>
         <Info className="h-4 w-4" />
         <AlertDescription>
           <p>Binning transforms continuous numbers into easy-to-read buckets:</p>
@@ -113,7 +113,7 @@ export function BinningHandler({
         </AlertDescription>
       </Alert>
 
-      <Alert className='mb-4 bg-green-50'>
+      <Alert className='mb-4 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800'>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
           Note that only numeric columns can be binned. We found {columnsWithSupportedTypes.length} numeric columns in your dataset.

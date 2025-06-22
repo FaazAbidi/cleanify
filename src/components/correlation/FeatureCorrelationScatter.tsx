@@ -1,11 +1,13 @@
 import {
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, 
-  Tooltip, ResponsiveContainer
+  ResponsiveContainer
 } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { getCorrelationColor, getCorrelationDescription } from "@/lib/correlation-utils";
+import { useDarkMode } from "@/hooks/useDarkMode";
 
 interface FeatureCorrelationScatterProps {
   xColumn: string;
@@ -26,6 +28,7 @@ export function FeatureCorrelationScatter({
   onXColumnChange,
   onYColumnChange,
 }: FeatureCorrelationScatterProps) {
+  const { isDarkMode } = useDarkMode();
   return (
     <div className="space-y-6">
       {/* Column selection and correlation display */}
@@ -71,7 +74,7 @@ export function FeatureCorrelationScatter({
             {correlation !== null ? (
               <>
                 <div className="flex justify-center items-center gap-2 mb-2">
-                  <Badge style={{ backgroundColor: getCorrelationColor(correlation) }}>
+                  <Badge style={{ backgroundColor: getCorrelationColor(correlation, isDarkMode) }}>
                     {correlation.toFixed(3)}
                   </Badge>
                   <span className="text-sm">{getCorrelationDescription(correlation)}</span>
@@ -96,36 +99,48 @@ export function FeatureCorrelationScatter({
       {/* Scatter plot visualization */}
       <div className="h-[300px] w-full">
         {scatterData.length > 0 ? (
-          <ResponsiveContainer width="100%" height="100%">
-            <ScatterChart
-              margin={{ top: 20, right: 20, bottom: 30, left: 40 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                type="number" 
-                dataKey="x" 
-                name={xColumn} 
-                label={{ value: xColumn, position: 'bottom' }} 
-              />
-              <YAxis 
-                type="number" 
-                dataKey="y" 
-                name={yColumn} 
-                label={{ value: yColumn, angle: -90, position: 'left' }} 
-              />
-              <Tooltip 
-                cursor={{ strokeDasharray: '3 3' }}
-                formatter={(value: any, name: any) => {
-                  return [value.toFixed(2), name === 'x' ? xColumn : yColumn];
-                }}
-              />
-              <Scatter 
-                name="Data Points" 
-                data={scatterData} 
-                fill={correlation !== null ? getCorrelationColor(correlation) : "#9CA3AF"}
-              />
-            </ScatterChart>
-          </ResponsiveContainer>
+          <ChartContainer
+            config={{
+              x: { label: xColumn, color: "hsl(var(--chart-1))" },
+              y: { label: yColumn, color: "hsl(var(--chart-2))" },
+            }}
+            className="h-full w-full"
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <ScatterChart
+                margin={{ top: 20, right: 20, bottom: 30, left: 40 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  type="number" 
+                  dataKey="x" 
+                  name={xColumn} 
+                  label={{ value: xColumn, position: 'bottom' }} 
+                />
+                <YAxis 
+                  type="number" 
+                  dataKey="y" 
+                  name={yColumn} 
+                  label={{ value: yColumn, angle: -90, position: 'left' }} 
+                />
+                <ChartTooltip 
+                  cursor={{ strokeDasharray: '3 3' }}
+                  content={
+                    <ChartTooltipContent 
+                      formatter={(value: any, name: any) => {
+                        return [value.toFixed(2), name === 'x' ? xColumn : yColumn];
+                      }}
+                    />
+                  }
+                />
+                <Scatter 
+                  name="Data Points" 
+                  data={scatterData} 
+                  fill={correlation !== null ? getCorrelationColor(correlation, isDarkMode) : (isDarkMode ? "#6B7280" : "#9CA3AF")}
+                />
+              </ScatterChart>
+            </ResponsiveContainer>
+          </ChartContainer>
         ) : (
           <div className="h-full flex items-center justify-center border rounded-lg">
             <p className="text-muted-foreground">

@@ -123,7 +123,7 @@ export function SkewnessMethodSelector({
                 <CardTitle className="text-lg flex items-center justify-between">
                   <span>{columnName}</span>
                   {columnInfo?.skewness !== undefined && (
-                    <span className={`text-sm px-2 py-1 rounded ${columnInfo.isSkewed ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-700'}`}>
+                    <span className={`text-sm px-2 py-1 rounded ${columnInfo.isSkewed ? 'bg-amber-100 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300' : 'bg-muted text-muted-foreground'}`}>
                       Skewness: {columnInfo.skewness.toFixed(2)}
                       {columnInfo.isSkewed && <span className="ml-1">(Significant)</span>}
                     </span>

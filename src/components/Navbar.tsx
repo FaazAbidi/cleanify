@@ -1,14 +1,16 @@
 
 import { Link, useLocation } from "react-router-dom";
-import { ChartBar, User } from "lucide-react";
+import { ChartBar, User, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useDarkMode } from "@/hooks/useDarkMode";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 
 export const Navbar = () => {
   const location = useLocation();
   const { user, signOut } = useAuth();
+  const { isDarkMode, toggleDarkMode } = useDarkMode();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
@@ -21,16 +23,28 @@ export const Navbar = () => {
   };
 
   return (
-    <nav className="bg-white shadow-sm">
+    <nav className="bg-background border-b border-border shadow-sm">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center">
           <Link to="/" className="flex items-center">
             <img src="/logo/logo.png" alt="Cleanify Logo" className="h-6 w-6 mr-2" />
-            <span className="font-semibold text-lg">Cleanify</span>
+            <span className="font-semibold text-lg text-foreground">Cleanify</span>
           </Link>
         </div>
         
         <div className="flex items-center space-x-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleDarkMode}
+            className="hover:bg-accent hover:text-accent-foreground"
+          >
+            {isDarkMode ? (
+              <Sun className="h-5 w-5" />
+            ) : (
+              <Moon className="h-5 w-5" />
+            )}
+          </Button>
           {user ? (
             <>
               <Button variant="ghost" size="sm" asChild>

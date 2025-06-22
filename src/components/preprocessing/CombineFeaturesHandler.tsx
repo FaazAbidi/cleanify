@@ -125,7 +125,7 @@ export function CombineFeaturesHandler({
 
   return (
     <div className="w-full">
-      <Alert className='mb-4 bg-blue-50'>
+      <Alert className='mb-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800'>
         <Info className="h-4 w-4" />
         <AlertDescription>
           <p>Combine Features creates a new column by mathematically merging numeric columns:</p>
@@ -138,7 +138,7 @@ export function CombineFeaturesHandler({
         </AlertDescription>
       </Alert>
 
-      <Alert className='mb-4 bg-green-50'>
+      <Alert className='mb-4 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800'>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
           Note that only numeric columns can be combined. We found {columnsWithSupportedTypes.length} numeric columns in your dataset.
@@ -192,7 +192,7 @@ export function CombineFeaturesHandler({
           </TabsList>
           
           <TabsContent value="column-selection">
-            <Alert className='mb-4 bg-amber-50'>
+            <Alert className='mb-4 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800'>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
                 Please select at least 2 numeric columns to combine. You have selected {selectedColumns.length} column(s).
@@ -256,7 +256,7 @@ export function CombineFeaturesHandler({
                   <div className="text-sm">
                     <div className="mb-2">Selected columns: {selectedColumns.join(', ')}</div>
                     <div className="mb-2">Operation: {operations.find(op => op.value === operation)?.label}</div>
-                    <div className="font-medium">New column name: <span className="text-blue-600">{newColumnName}</span></div>
+                    <div className="font-medium">New column name: <span className="text-blue-600 dark:text-blue-400">{newColumnName}</span></div>
                   </div>
                 </div>
               </CardContent>
@@ -311,7 +311,7 @@ export function CombineFeaturesHandler({
                         </div>
                         <div className="mb-2">
                           <span className="font-medium">New Column: </span>
-                          <span className="text-blue-600">{newColumnName}</span>
+                          <span className="text-blue-600 dark:text-blue-400">{newColumnName}</span>
                         </div>
                         <div className="text-sm text-muted-foreground">
                           {operations.find(op => op.value === operation)?.description}
@@ -320,7 +320,7 @@ export function CombineFeaturesHandler({
                     </div>
                   </div>
 
-                  <Alert className="bg-blue-50">
+                  <Alert className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
                     <Plus className="h-4 w-4" />
                     <AlertDescription>
                       <div className="font-medium mb-2">What will happen:</div>
@@ -333,7 +333,7 @@ export function CombineFeaturesHandler({
                     </AlertDescription>
                   </Alert>
 
-                  <div className="mt-6 p-4 bg-yellow-50 rounded-md">
+                  <div className="mt-6 p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
                     <h4 className="font-medium mb-2">Important Notes:</h4>
                     <ul className="list-disc pl-6 text-sm space-y-1">
                       <li>Division by zero will result in NaN or Inf values</li>

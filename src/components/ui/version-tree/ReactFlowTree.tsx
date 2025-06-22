@@ -37,12 +37,12 @@ function VersionNodeComponent({ data }: NodeProps) {
   // Status color mapping
   const getStatusColor = (status: string | null) => {
     const statusColors: Record<string, string> = {
-      RAW: "bg-yellow-100 text-yellow-800",
-      PROCESSED: "bg-blue-100 text-blue-800",
-      COMPLETED: "bg-green-100 text-green-800",
-      ERROR: "bg-red-100 text-red-800",
-      RUNNING: "bg-purple-100 text-purple-800",
-      FAILED: "bg-red-100 text-red-800"
+      RAW: "bg-yellow-100 text-yellow-800 dark:bg-yellow-950/20 dark:text-yellow-300",
+      PROCESSED: "bg-blue-100 text-blue-800 dark:bg-blue-950/20 dark:text-blue-300",
+      COMPLETED: "bg-green-100 text-green-800 dark:bg-green-950/20 dark:text-green-300",
+      ERROR: "bg-red-100 text-red-800 dark:bg-red-950/20 dark:text-red-300",
+      RUNNING: "bg-purple-100 text-purple-800 dark:bg-purple-950/20 dark:text-purple-300",
+      FAILED: "bg-red-100 text-red-800 dark:bg-red-950/20 dark:text-red-300"
     };
     return status ? statusColors[status] || "" : "";
   };
@@ -50,9 +50,9 @@ function VersionNodeComponent({ data }: NodeProps) {
   // Determine border styling based on selection type
   const getBorderStyle = () => {
     if (isSelected) {
-      return 'ring-2 ring-green-500'; // Green border for global selection (version selector)
+      return 'ring-2 ring-green-500 dark:ring-green-400'; // Green border for global selection (version selector)
     } else if (isLocallySelected) {
-      return 'ring-2 ring-purple-500'; // Purple border for local selection (clicked in tree)
+      return 'ring-2 ring-purple-500 dark:ring-purple-400'; // Purple border for local selection (clicked in tree)
     }
     return '';
   };
