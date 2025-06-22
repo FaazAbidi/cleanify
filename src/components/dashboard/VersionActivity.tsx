@@ -3,41 +3,59 @@ import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Progress } from "@/components/ui/progress";
 import { Tables } from "@/integrations/supabase/types";
+import { TaskMethodStats } from "@/hooks/useTaskMethods";
 import { GitBranch, Clock, CheckCircle, XCircle, TrendingUp, Activity } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useMemo } from "react";
 
 interface VersionActivityProps {
   tasks: Tables<'Tasks'>[];
+  taskMethodStats: TaskMethodStats | null;
 }
 
-export const VersionActivity = ({ tasks }: VersionActivityProps) => {
-  // Mock version data for demonstration (in real app, this would come from TaskMethods)
+export const VersionActivity = ({ tasks, taskMethodStats }: VersionActivityProps) => {
+  // Use real version data from TaskMethods
   const versionStats = useMemo(() => {
-    const completedTasks = tasks.filter(task => task.status === 'PROCESSED');
-    const totalVersions = completedTasks.length * 2.5; // Mock: average 2.5 versions per task
-    const activeVersions = tasks.filter(task => task.status === 'RUNNING').length;
+    if (!taskMethodStats) {
+      return {
+        totalVersions: 0,
+        activeVersions: 0,
+        averageVersionsPerTask: '0',
+        versionSuccessRate: 0,
+      };
+    }
+
+    const totalVersionsByStatus = taskMethodStats.versionsByStatus;
+    const totalVersions = taskMethodStats.totalVersions;
+    const activeVersions = totalVersionsByStatus.RUNNING;
+    const averageVersionsPerTask = taskMethodStats.averageVersionsPerTask.toFixed(1);
+    
+    // Calculate success rate from real data
+    const successfulVersions = totalVersionsByStatus.PROCESSED;
+    const versionSuccessRate = totalVersions > 0 ? Math.round((successfulVersions / totalVersions) * 100) : 0;
     
     return {
-      totalVersions: Math.floor(totalVersions),
+      totalVersions,
       activeVersions,
-      averageVersionsPerTask: completedTasks.length > 0 ? (totalVersions / completedTasks.length).toFixed(1) : '0',
-      versionSuccessRate: 85, // Mock success rate
+      averageVersionsPerTask,
+      versionSuccessRate,
     };
-  }, [tasks]);
+  }, [taskMethodStats]);
 
-  // Mock recent version activities
+  // Use real recent version activities
   const recentVersions = useMemo(() => {
-    return tasks.slice(0, 6).map((task, index) => ({
-      id: `${task.id}-v${index + 1}`,
-      taskName: task.name,
-      versionNumber: index + 1,
-      status: ['PROCESSED', 'RUNNING', 'FAILED'][Math.floor(Math.random() * 3)] as 'PROCESSED' | 'RUNNING' | 'FAILED',
-      createdAt: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000),
-      methodsApplied: Math.floor(Math.random() * 5) + 1,
-      dataQualityScore: Math.floor(Math.random() * 30) + 70,
+    if (!taskMethodStats?.recentVersions) return [];
+    
+    return taskMethodStats.recentVersions.slice(0, 6).map((version, index) => ({
+      id: version.id,
+      taskName: version.task_name,
+      versionNumber: index + 1, // Simple sequential numbering for display
+      status: version.status as 'PROCESSED' | 'RUNNING' | 'FAILED',
+      createdAt: new Date(version.created_at),
+      methodsApplied: version.method_name ? 1 : 0, // Simple count based on whether method exists
+      methodName: version.method_name,
     }));
-  }, [tasks]);
+  }, [taskMethodStats]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -138,8 +156,7 @@ export const VersionActivity = ({ tasks }: VersionActivityProps) => {
                       </Badge>
                     </div>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span>{version.methodsApplied} methods</span>
-                      <span>Quality: {version.dataQualityScore}%</span>
+                      <span>{version.methodName || 'No method'}</span>
                       <span>{formatDistanceToNow(version.createdAt, { addSuffix: true })}</span>
                     </div>
                   </div>

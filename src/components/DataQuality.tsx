@@ -320,29 +320,149 @@ function calculateCompletenessScore(dataset: DatasetType): number {
 }
 
 function calculateUniquenessScore(dataset: DatasetType): number {
-  // Simple calculation - can be enhanced with actual duplicate detection
-  return Math.round(Math.random() * 20 + 80); // Mock score between 80-100%
+  // Calculate uniqueness based on the ratio of unique values to total values
+  const totalCells = dataset.rows * dataset.columns.length;
+  if (totalCells === 0) return 100;
+  
+  // Sum up unique values across all columns
+  const totalUniqueValues = dataset.columns.reduce((sum, col) => {
+    // For columns with unique values data, use that
+    if (col.uniqueValues !== undefined) {
+      return sum + col.uniqueValues;
+    }
+    // Otherwise estimate based on column type and missing values
+    const nonMissingValues = dataset.rows - col.missingValues;
+    if (col.type === 'categorical') {
+      // Assume categorical columns have fewer unique values
+      return sum + Math.min(nonMissingValues, Math.ceil(nonMissingValues * 0.8));
+    } else if (col.type === 'numeric') {
+      // Numeric columns typically have more unique values
+      return sum + Math.min(nonMissingValues, Math.ceil(nonMissingValues * 0.95));
+    } else {
+      // Default assumption for other types
+      return sum + Math.min(nonMissingValues, Math.ceil(nonMissingValues * 0.9));
+    }
+  }, 0);
+  
+  // Calculate uniqueness percentage
+  return Math.round((totalUniqueValues / totalCells) * 100);
 }
 
 function calculateConsistencyScore(dataset: DatasetType): number {
-  // Check for consistent data types - this is a simplified version
-  const consistentColumns = dataset.columns.filter(col => 
-    col.type === 'numeric' || col.type === 'categorical' || col.type === 'datetime'
-  ).length;
-  return Math.round((consistentColumns / dataset.columns.length) * 100);
+  if (dataset.columns.length === 0) return 100;
+  
+  let consistencyScore = 0;
+  
+  // Check data type consistency for each column
+  dataset.columns.forEach(col => {
+    let columnScore = 100; // Start with perfect score
+    
+    // Penalize high missing values (inconsistency in data presence)
+    if (col.missingPercent > 50) {
+      columnScore -= 30;
+    } else if (col.missingPercent > 20) {
+      columnScore -= 15;
+    } else if (col.missingPercent > 10) {
+      columnScore -= 5;
+    }
+    
+    // For categorical columns, check if they have reasonable number of categories
+    if (col.type === 'categorical' && col.uniqueValues !== undefined) {
+      const categoryRatio = col.uniqueValues / dataset.rows;
+      if (categoryRatio > 0.8) {
+        // Too many categories for a categorical column (might be misclassified)
+        columnScore -= 20;
+      }
+    }
+    
+    // For numeric columns, check for reasonable distribution
+    if (col.type === 'numeric' && col.outliers !== undefined) {
+      const outlierRatio = col.outliers / dataset.rows;
+      if (outlierRatio > 0.2) {
+        // High outlier percentage suggests inconsistent data
+        columnScore -= 15;
+      }
+    }
+    
+    // Ensure score doesn't go below 0
+    columnScore = Math.max(0, columnScore);
+    consistencyScore += columnScore;
+  });
+  
+  // Return average consistency score across all columns
+  return Math.round(consistencyScore / dataset.columns.length);
 }
 
 function calculateAccuracyScore(dataset: DatasetType): number {
-  // Simple outlier detection score - can be enhanced
-  const numericColumns = dataset.columns.filter(col => col.type === 'numeric');
-  if (numericColumns.length === 0) return 100;
+  if (dataset.columns.length === 0 || dataset.rows === 0) return 100;
   
-  const avgOutlierPercentage = numericColumns.reduce((sum, col) => {
-    const outlierPercentage = col.outliers ? (col.outliers / dataset.rows) * 100 : 0;
-    return sum + outlierPercentage;
-  }, 0) / numericColumns.length;
+  let totalAccuracyScore = 0;
+  let evaluatedColumns = 0;
   
-  return Math.round(100 - avgOutlierPercentage);
+  dataset.columns.forEach(col => {
+    let columnAccuracy = 100; // Start with perfect accuracy
+    
+    // Check for outliers in numeric columns
+    if (col.type === 'numeric' && col.outliers !== undefined) {
+      const outlierRatio = col.outliers / dataset.rows;
+      // Penalize based on outlier percentage
+      if (outlierRatio > 0.15) {
+        columnAccuracy -= 25; // Significant outlier presence
+      } else if (outlierRatio > 0.1) {
+        columnAccuracy -= 15;
+      } else if (outlierRatio > 0.05) {
+        columnAccuracy -= 8;
+      }
+      evaluatedColumns++;
+    }
+    
+    // Check for extreme skewness in numeric columns (indicates potential data issues)
+    if (col.type === 'numeric' && col.skewness !== undefined) {
+      const absSkewness = Math.abs(col.skewness);
+      if (absSkewness > 3) {
+        columnAccuracy -= 15; // Very high skewness
+      } else if (absSkewness > 2) {
+        columnAccuracy -= 10;
+      } else if (absSkewness > 1.5) {
+        columnAccuracy -= 5;
+      }
+      evaluatedColumns++;
+    }
+    
+    // Check for reasonable unique value ratios in categorical columns
+    if (col.type === 'categorical' && col.uniqueValues !== undefined) {
+      const uniqueRatio = col.uniqueValues / (dataset.rows - col.missingValues);
+      // If almost every value is unique in a categorical column, it might indicate data issues
+      if (uniqueRatio > 0.95) {
+        columnAccuracy -= 20;
+      } else if (uniqueRatio > 0.9) {
+        columnAccuracy -= 10;
+      }
+      evaluatedColumns++;
+    }
+    
+    // Penalize high missing values as they affect accuracy
+    if (col.missingPercent > 30) {
+      columnAccuracy -= 15;
+    } else if (col.missingPercent > 15) {
+      columnAccuracy -= 8;
+    } else if (col.missingPercent > 5) {
+      columnAccuracy -= 3;
+    }
+    
+    // Ensure score doesn't go below 0
+    columnAccuracy = Math.max(0, columnAccuracy);
+    totalAccuracyScore += columnAccuracy;
+  });
+  
+  // If no columns were evaluated for specific accuracy metrics, 
+  // base score on general data completeness
+  if (evaluatedColumns === 0) {
+    const completenessScore = calculateCompletenessScore(dataset);
+    return Math.max(85, completenessScore); // Assume good accuracy if data is complete
+  }
+  
+  return Math.round(totalAccuracyScore / dataset.columns.length);
 }
 
 function getQualityLabel(score: number): string {

@@ -2,15 +2,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line, ComposedChart, Area, AreaChart } from "recharts";
 import { Tables } from "@/integrations/supabase/types";
+import { TaskMethodStats } from "@/hooks/useTaskMethods";
 import { format, subDays, startOfDay } from "date-fns";
 import { TrendingUp, Activity, GitBranch } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface ActivityChartProps {
   tasks: Tables<'Tasks'>[];
+  taskMethodStats: TaskMethodStats | null;
 }
 
-export const ActivityChart = ({ tasks }: ActivityChartProps) => {
+export const ActivityChart = ({ tasks, taskMethodStats }: ActivityChartProps) => {
   const [screenSize, setScreenSize] = useState('lg');
 
   // Monitor screen size for responsive adjustments
@@ -29,17 +31,19 @@ export const ActivityChart = ({ tasks }: ActivityChartProps) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Generate data for the last 14 days for better trend visualization
+  // Generate data for the last 14 days using real data from TaskMethods
   const last14Days = Array.from({ length: 14 }, (_, i) => {
     const date = startOfDay(subDays(new Date(), 13 - i));
+    const dateStr = format(date, 'yyyy-MM-dd');
     const dayTasks = tasks.filter(task => {
       const taskDate = startOfDay(new Date(task.created_at));
       return taskDate.getTime() === date.getTime();
     });
 
-    // Mock version and method data (in real app, this would come from TaskMethods)
-    const mockVersions = dayTasks.length * (1 + Math.random() * 2);
-    const mockMethods = dayTasks.length * (2 + Math.random() * 3);
+    // Get real version and method data from TaskMethods stats
+    const dayActivity = taskMethodStats?.dailyActivity.find(d => d.date === dateStr);
+    const versions = dayActivity?.versions || 0;
+    const methods = dayActivity?.methods || 0;
 
     return {
       date: screenSize === 'sm' || screenSize === 'md' ? format(date, 'M/d') : 
@@ -53,8 +57,8 @@ export const ActivityChart = ({ tasks }: ActivityChartProps) => {
       completed: dayTasks.filter(t => t.status === 'PROCESSED').length,
       failed: dayTasks.filter(t => t.status === 'FAILED').length,
       running: dayTasks.filter(t => t.status === 'RUNNING').length,
-      versions: Math.floor(mockVersions),
-      methods: Math.floor(mockMethods),
+      versions,
+      methods,
     };
   });
 

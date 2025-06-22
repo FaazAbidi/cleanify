@@ -1,15 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Database, FileText, TrendingUp, Clock, Wrench, GitBranch, Zap, AlertTriangle } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
+import { TaskMethodStats } from "@/hooks/useTaskMethods";
 import { useMethods } from "@/hooks/useMethods";
-import { useTaskVersions } from "@/hooks/useTaskVersions";
 import { useMemo } from "react";
 
 interface DashboardStatsProps {
   tasks: Tables<'Tasks'>[];
+  taskMethodStats: TaskMethodStats | null;
 }
 
-export const DashboardStats = ({ tasks }: DashboardStatsProps) => {
+export const DashboardStats = ({ tasks, taskMethodStats }: DashboardStatsProps) => {
   const { methods } = useMethods();
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter(task => task.status === 'PROCESSED').length;
@@ -18,12 +19,8 @@ export const DashboardStats = ({ tasks }: DashboardStatsProps) => {
   
   const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
   
-  // Count total versions across all tasks
-  const totalVersions = useMemo(() => {
-    // This would need to be calculated from TaskMethods table
-    // For now, using a simple approximation
-    return completedTasks * 2; // Assuming average 2 versions per completed task
-  }, [completedTasks]);
+  // Use real data from TaskMethods
+  const totalVersions = taskMethodStats?.totalVersions || 0;
 
   const stats = [
     {

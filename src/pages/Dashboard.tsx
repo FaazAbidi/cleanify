@@ -3,6 +3,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { useTasks } from "@/hooks/useTasks";
+import { useTaskMethods } from "@/hooks/useTaskMethods";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { ActivityChart } from "@/components/dashboard/ActivityChart";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
@@ -19,6 +20,7 @@ import { useToast } from "@/components/ui/use-toast";
 const Dashboard = () => {
   const { user, profile } = useAuth();
   const { tasks, loading, fetchTasks } = useTasks(user?.id);
+  const { stats: taskMethodStats, loading: methodsLoading } = useTaskMethods(user?.id);
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const { toast } = useToast();
 
@@ -32,7 +34,7 @@ const Dashboard = () => {
     });
   };
 
-  if (loading) {
+  if (loading || methodsLoading) {
     return (
       <AppSidebar>
         <div className="flex items-center justify-center min-h-[400px]">
@@ -62,7 +64,7 @@ const Dashboard = () => {
         </div>
 
         {/* Stats Overview */}
-        <DashboardStats tasks={tasks} />
+        <DashboardStats tasks={tasks} taskMethodStats={taskMethodStats} />
 
         <Separator className="my-8" />
 
@@ -76,10 +78,10 @@ const Dashboard = () => {
             </div>
             <div className="grid gap-4 sm:gap-6 2xl:grid-cols-2 w-full">
               <div className="2xl:col-span-1 min-w-0">
-                <ActivityChart tasks={tasks} />
+                <ActivityChart tasks={tasks} taskMethodStats={taskMethodStats} />
               </div>
               <div className="2xl:col-span-1 min-w-0">
-                <PerformanceMetrics tasks={tasks} />
+                <PerformanceMetrics tasks={tasks} taskMethodStats={taskMethodStats} />
               </div>
             </div>
           </section>
@@ -91,8 +93,8 @@ const Dashboard = () => {
               <h2 className="text-xl font-semibold">Methods & Versions</h2>
             </div>
             <div className="space-y-6">
-              <MethodInsights tasks={tasks} />
-              <VersionActivity tasks={tasks} />
+              <MethodInsights tasks={tasks} taskMethodStats={taskMethodStats} />
+              <VersionActivity tasks={tasks} taskMethodStats={taskMethodStats} />
             </div>
           </section>
 

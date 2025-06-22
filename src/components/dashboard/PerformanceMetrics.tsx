@@ -2,14 +2,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tables } from "@/integrations/supabase/types";
+import { TaskMethodStats } from "@/hooks/useTaskMethods";
 import { TrendingUp, TrendingDown, Clock, Target, Zap, AlertTriangle, CheckCircle } from "lucide-react";
 import { useMemo } from "react";
 
 interface PerformanceMetricsProps {
   tasks: Tables<'Tasks'>[];
+  taskMethodStats: TaskMethodStats | null;
 }
 
-export const PerformanceMetrics = ({ tasks }: PerformanceMetricsProps) => {
+export const PerformanceMetrics = ({ tasks, taskMethodStats }: PerformanceMetricsProps) => {
   const metrics = useMemo(() => {
     const totalTasks = tasks.length;
     const completedTasks = tasks.filter(task => task.status === 'PROCESSED').length;
@@ -20,24 +22,26 @@ export const PerformanceMetrics = ({ tasks }: PerformanceMetricsProps) => {
     const failureRate = totalTasks > 0 ? (failedTasks / totalTasks) * 100 : 0;
     const completionRate = totalTasks > 0 ? ((completedTasks + failedTasks) / totalTasks) * 100 : 0;
 
-    // Mock performance data (in real app, this would come from actual processing times)
-    const avgProcessingTime = 2.5; // hours
-    const dataQualityScore = 87; // percentage
-    const methodEfficiency = 92; // percentage
+    // Calculate real performance metrics from TaskMethods data
+    const versionSuccessRate = taskMethodStats?.versionsByStatus ? 
+      ((taskMethodStats.versionsByStatus.PROCESSED / 
+        (taskMethodStats.versionsByStatus.PROCESSED + taskMethodStats.versionsByStatus.FAILED + taskMethodStats.versionsByStatus.RUNNING)) * 100) || 0 : 0;
+    
+    const methodEfficiency = taskMethodStats?.methodUsage.length > 0 ? 
+      taskMethodStats.methodUsage.reduce((sum, method) => sum + method.success_rate, 0) / taskMethodStats.methodUsage.length : 0;
 
     return {
       successRate: Math.round(successRate),
       failureRate: Math.round(failureRate),
       completionRate: Math.round(completionRate),
-      avgProcessingTime,
-      dataQualityScore,
-      methodEfficiency,
+      versionSuccessRate: Math.round(versionSuccessRate),
+      methodEfficiency: Math.round(methodEfficiency),
       totalTasks,
       completedTasks,
       runningTasks,
       failedTasks,
     };
-  }, [tasks]);
+  }, [tasks, taskMethodStats]);
 
   const performanceItems = [
     {
@@ -52,15 +56,15 @@ export const PerformanceMetrics = ({ tasks }: PerformanceMetricsProps) => {
       description: "Tasks completed successfully"
     },
     {
-      title: "Data Quality Score",
-      value: `${metrics.dataQualityScore}%`,
-      progress: metrics.dataQualityScore,
+      title: "Version Success Rate",
+      value: `${metrics.versionSuccessRate}%`,
+      progress: metrics.versionSuccessRate,
       icon: Target,
       color: "text-blue-600 dark:text-blue-400",
       bgColor: "bg-blue-50 dark:bg-blue-950/20",
       progressColor: "bg-blue-500",
-      trend: 'up',
-      description: "Average quality after processing"
+      trend: metrics.versionSuccessRate > 80 ? 'up' : 'down',
+      description: "Successful version processing rate"
     },
     {
       title: "Method Efficiency",
@@ -70,8 +74,8 @@ export const PerformanceMetrics = ({ tasks }: PerformanceMetricsProps) => {
       color: "text-purple-600 dark:text-purple-400",
       bgColor: "bg-purple-50 dark:bg-purple-950/20",
       progressColor: "bg-purple-500",
-      trend: 'up',
-      description: "Processing method effectiveness"
+      trend: metrics.methodEfficiency > 70 ? 'up' : 'down',
+      description: "Average method success rate"
     },
     {
       title: "Completion Rate",
@@ -136,16 +140,16 @@ export const PerformanceMetrics = ({ tasks }: PerformanceMetricsProps) => {
           </h4>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Avg. Processing Time</p>
-              <p className="text-sm font-semibold">{metrics.avgProcessingTime}h</p>
+              <p className="text-xs text-muted-foreground">Total Versions</p>
+              <p className="text-sm font-semibold">{taskMethodStats?.totalVersions || 0}</p>
             </div>
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">Active Tasks</p>
               <p className="text-sm font-semibold text-orange-600 dark:text-orange-400">{metrics.runningTasks}</p>
             </div>
             <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Queue Efficiency</p>
-              <p className="text-sm font-semibold">95%</p>
+              <p className="text-xs text-muted-foreground">Avg. Versions/Task</p>
+              <p className="text-sm font-semibold">{taskMethodStats?.averageVersionsPerTask.toFixed(1) || '0'}</p>
             </div>
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">Error Rate</p>
