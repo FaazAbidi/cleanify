@@ -1,9 +1,9 @@
-
 import { useState, useEffect, createContext, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 import { useToast } from '@/components/ui/use-toast';
+import { generateUniqueUsername, updateUserProfile } from '@/lib/username-utils';
 
 type AuthContextType = {
   user: User | null;
@@ -11,7 +11,7 @@ type AuthContextType = {
   profile: any;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, username: string) => Promise<void>;
+  signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
@@ -121,14 +121,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   // Sign up with email and password
-  const signUp = async (email: string, password: string, username: string): Promise<void> => {
+  const signUp = async (email: string, password: string, fullName: string): Promise<void> => {
     try {
+      // First generate a unique username
+      const username = await generateUniqueUsername(fullName);
+      
       const { error, data } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            username,
+            full_name: fullName,
+            username: username,
           },
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
@@ -137,6 +141,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (error) throw error;
 
       console.log("Sign up successful:", data);
+      
+      // If user is created, create profile record
+      if (data.user) {
+        try {
+          await updateUserProfile(data.user.id, fullName, username);
+        } catch (profileError) {
+          console.error('Error updating profile:', profileError);
+          // Don't throw here as the user account was created successfully
+          // The profile can be updated later
+        }
+      }
       
       if (data.session) {
         // User is automatically signed in (email confirmation is disabled)

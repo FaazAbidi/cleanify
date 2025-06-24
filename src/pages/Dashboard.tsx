@@ -24,7 +24,7 @@ const Dashboard = () => {
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const welcomeName = profile?.username || profile?.full_name || user?.email?.split('@')[0] || 'there';
+  const welcomeName = profile?.full_name || profile?.username || user?.email?.split('@')[0] || 'there';
 
   const handleTaskCreated = () => {
     fetchTasks();

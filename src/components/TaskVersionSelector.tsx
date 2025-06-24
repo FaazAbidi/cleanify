@@ -77,10 +77,10 @@ export function TaskVersionSelector({
             </div>
 
             {/* Status and File Name */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
-                <Activity className="h-4 w-4 text-muted-foreground" />
-                <div className="flex-1">
+                <Activity className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground">Processing Status</p>
                   <StatusBadge status={selectedVersion.status} />
                 </div>
@@ -88,12 +88,14 @@ export function TaskVersionSelector({
 
               {selectedVersion.file && (
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <div className="flex-1">
+                  <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
                     <p className="text-xs text-muted-foreground">File Name</p>
-                    <p className="text-sm font-medium text-foreground">{selectedVersion.file.file_name}</p>
+                    <p className="text-sm font-medium text-foreground truncate" title={selectedVersion.file.file_name}>
+                      {selectedVersion.file.file_name}
+                    </p>
                   </div>
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" className="text-xs flex-shrink-0">
                     {selectedVersion.status === 'RAW' ? 'Original' : 'Processed'}
                   </Badge>
                 </div>
@@ -103,8 +105,8 @@ export function TaskVersionSelector({
             {/* Date Information */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <div className="flex-1">
+                <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground">Created</p>
                   <p className="text-sm font-medium text-foreground">{formatDate(selectedVersion.created_at)}</p>
                 </div>
@@ -112,8 +114,8 @@ export function TaskVersionSelector({
               
               {selectedVersion.file?.file_size && (
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/50">
-                  <HardDrive className="h-4 w-4 text-muted-foreground" />
-                  <div className="flex-1">
+                  <HardDrive className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
                     <p className="text-xs text-muted-foreground">File Size</p>
                     <p className="text-sm font-medium text-foreground">{formatBytes(selectedVersion.file.file_size)}</p>
                   </div>

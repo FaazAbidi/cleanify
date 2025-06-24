@@ -72,12 +72,23 @@ export function TaskDetails({
           <TaskLoadingIndicator progress={progress} />
         ) : dataset ? (
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 mb-6">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="quality">Data Quality</TabsTrigger>
-              <TabsTrigger value="columns">Column Analysis</TabsTrigger>
-              <TabsTrigger value="datatypes">Data Types</TabsTrigger>
-              <TabsTrigger value="correlation">Correlation</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 mb-6 h-auto">
+              <TabsTrigger value="overview" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="quality" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+                <span className="hidden sm:inline">Data </span>Quality
+              </TabsTrigger>
+              <TabsTrigger value="columns" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+                <span className="hidden sm:inline">Column </span>Analysis
+              </TabsTrigger>
+              <TabsTrigger value="datatypes" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+                <span className="hidden sm:inline">Data </span>Types
+              </TabsTrigger>
+              <TabsTrigger value="correlation" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+                <span className="hidden lg:inline">Correlation</span>
+                <span className="lg:hidden">Corr</span>
+              </TabsTrigger>
             </TabsList>
             
             <div className="w-full">

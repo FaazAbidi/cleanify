@@ -390,18 +390,21 @@ export function VersionDiffVisualizations({
       </Card>
 
       <Tabs defaultValue="distributions" className="w-full">
-        <TabsList className="grid grid-cols-3 mb-4">
-          <TabsTrigger value="distributions">
-            <BarChart2 className="h-4 w-4 mr-2" />
-            Distribution Changes
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 mb-4 h-auto">
+          <TabsTrigger value="distributions" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+            <BarChart2 className="h-4 w-4 mr-1 sm:mr-2 flex-shrink-0" />
+            <span className="hidden sm:inline">Distribution Changes</span>
+            <span className="sm:hidden">Distributions</span>
           </TabsTrigger>
-          <TabsTrigger value="outliers">
-            <AlertTriangle className="h-4 w-4 mr-2" />
-            Outliers & Missing Values
+          <TabsTrigger value="outliers" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+            <AlertTriangle className="h-4 w-4 mr-1 sm:mr-2 flex-shrink-0" />
+            <span className="hidden sm:inline">Outliers & Missing Values</span>
+            <span className="sm:hidden">Outliers</span>
           </TabsTrigger>
-          <TabsTrigger value="correlations">
-            <BrainCircuit className="h-4 w-4 mr-2" />
-            Correlation Changes
+          <TabsTrigger value="correlations" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+            <BrainCircuit className="h-4 w-4 mr-1 sm:mr-2 flex-shrink-0" />
+            <span className="hidden sm:inline">Correlation Changes</span>
+            <span className="sm:hidden">Correlations</span>
           </TabsTrigger>
         </TabsList>
         

@@ -113,11 +113,19 @@ export const TaskVersionTabs = memo(forwardRef<TaskVersionTabsRef, TaskVersionTa
   
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-      <TabsList className="grid grid-cols-4 mb-6">
-        <TabsTrigger value="exploration">Data Exploration</TabsTrigger>
-        <TabsTrigger value="preprocessing">Preprocessing</TabsTrigger>
-        <TabsTrigger value="history">History</TabsTrigger>
-        <TabsTrigger value="compare">Compare</TabsTrigger>
+      <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-6 h-auto">
+        <TabsTrigger value="exploration" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+          <span className="hidden sm:inline">Data </span>Exploration
+        </TabsTrigger>
+        <TabsTrigger value="preprocessing" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+          Preprocessing
+        </TabsTrigger>
+        <TabsTrigger value="history" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+          History
+        </TabsTrigger>
+        <TabsTrigger value="compare" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+          Compare
+        </TabsTrigger>
       </TabsList>
       
       <TabsContent value="exploration" className="w-full">

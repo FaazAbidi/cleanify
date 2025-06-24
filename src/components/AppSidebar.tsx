@@ -248,7 +248,7 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
               </div>
               <div>
                 <div className="font-medium text-sidebar-foreground">
-                  {profile ? profile.username : user?.email?.split("@")[0]}
+                  {profile ? profile.full_name : user?.email?.split("@")[0]}
                 </div>
               </div>
               <ChevronDown className="ml-auto h-4 w-4 text-sidebar-foreground" />
@@ -384,7 +384,7 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
           <div className="w-full flex-1 flex flex-row gap-2 items-center">
             <div className="flex flex-row gap-1 items-center">
               <h4 className="text-sm text-muted-foreground">Hello,</h4>
-              <h4 className="text-sm font-semibold text-foreground">{profile?.username}</h4>
+              <h4 className="text-sm font-semibold text-foreground">{profile?.full_name}</h4>
             </div>
           </div>
 
