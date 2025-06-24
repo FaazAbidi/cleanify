@@ -170,9 +170,14 @@ export function VersionComparison({
             </Card>
           ) : (
             <Tabs value={activeDiffTab} onValueChange={setActiveDiffTab} className="w-full">
-              <TabsList className="grid grid-cols-2 mb-6">
-                <TabsTrigger value="table">Data Table Diff</TabsTrigger>
-                <TabsTrigger value="visualizations">Visualizations</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 mb-6 h-auto">
+                <TabsTrigger value="table" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+                  <span className="hidden sm:inline">Data Table </span>Diff
+                </TabsTrigger>
+                <TabsTrigger value="visualizations" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+                  <span className="hidden sm:inline">Visualizations</span>
+                  <span className="sm:hidden">Visual</span>
+                </TabsTrigger>
               </TabsList>
               
               <TabsContent value="table" className="w-full">

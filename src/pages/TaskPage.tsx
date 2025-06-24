@@ -13,6 +13,7 @@ import { usePreprocessingStatus } from "@/hooks/usePreprocessingStatus";
 import { TaskMetadata } from "@/components/TaskMetadata";
 import { TaskVersionSelector } from "@/components/TaskVersionSelector";
 import { TaskVersionTabs, TaskVersionTabsRef } from "@/components/TaskVersionTabs";
+import { DownloadButton } from "@/components/DownloadButton";
 
 // Create a context to expose the tab functions to deeply nested components
 import { createContext } from "react";
@@ -212,24 +213,51 @@ const TaskPage = () => {
         <div className="w-full">
           <Breadcrumbs items={breadcrumbItems} />
           
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">{task?.name || "Task Details"}</h1>
-              <p className="text-muted-foreground mt-1">Manage and analyze your data preprocessing task</p>
+          <div className="flex flex-col gap-4 mb-8 lg:flex-row lg:justify-between lg:items-center">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">{task?.name || "Task Details"}</h1>
+              <p className="text-muted-foreground mt-1 text-sm sm:text-base">Manage and analyze your data preprocessing task</p>
             </div>
             
-            {/* Add preprocessing status indicator */}
-            {isProcessing && (
-              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
-                <Loader2 className="h-4 w-4 text-amber-600 dark:text-amber-400 animate-spin" />
-                <div>
-                  <p className="text-sm font-medium text-amber-800 dark:text-amber-300">Processing in progress</p>
-                  <p className="text-xs text-amber-600 dark:text-amber-400">
-                    {processingVersion?.name}
-                  </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              {/* Download section for selected version */}
+              {selectedVersion && (
+                <div className="flex items-center gap-3 px-3 sm:px-4 py-3 rounded-lg bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {selectedVersion.name}
+                      </p>
+                      {selectedVersion.file && (
+                        <p className="text-xs text-muted-foreground truncate">
+                          {selectedVersion.file.file_name}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <DownloadButton 
+                    version={selectedVersion}
+                    variant="default"
+                    size="sm"
+                    className="flex-shrink-0"
+                  />
                 </div>
-              </div>
-            )}
+              )}
+              
+              {/* Add preprocessing status indicator */}
+              {isProcessing && (
+                <div className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                  <Loader2 className="h-4 w-4 text-amber-600 dark:text-amber-400 animate-spin flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-amber-800 dark:text-amber-300">Processing in progress</p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 truncate">
+                      {processingVersion?.name}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           
           <div className="w-full space-y-6">
