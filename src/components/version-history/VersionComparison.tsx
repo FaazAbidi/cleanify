@@ -11,6 +11,7 @@ import { VersionDiffTable } from "./VersionDiffTable";
 import { VersionDiffVisualizations } from "./VersionDiffVisualizations";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTaskData } from '@/hooks/useTaskData';
+import { useTabState } from '@/hooks/useTabState';
 
 interface VersionComparisonProps {
   versions: TaskVersion[];
@@ -28,8 +29,11 @@ export function VersionComparison({
   isUnprocessedVersion
 }: VersionComparisonProps) {
   const [compareVersion, setCompareVersion] = useState<TaskVersion | null>(null);
-  const [activeDiffTab, setActiveDiffTab] = useState("table");
   const [compareVersionData, setCompareVersionData] = useState<DatasetType | null>(null);
+  
+  // Use URL-based subtab state for compare tab
+  const { tabState, setCompareSubTab } = useTabState();
+  const activeDiffTab = tabState.compareSubTab || 'table';
   
   const { taskData, loadingTaskData, loadTaskData } = useTaskData();
 
@@ -169,7 +173,7 @@ export function VersionComparison({
               </CardContent>
             </Card>
           ) : (
-            <Tabs value={activeDiffTab} onValueChange={setActiveDiffTab} className="w-full">
+            <Tabs value={activeDiffTab} onValueChange={setCompareSubTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6 h-auto">
                 <TabsTrigger value="table" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
                   <span className="hidden sm:inline">Data Table </span>Diff

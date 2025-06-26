@@ -13,6 +13,7 @@ import { TaskVersion } from "@/types/version";
 import { Badge } from "./ui/badge";
 import { formatBytes } from "@/lib/format";
 import { useState } from "react";
+import { useTabState } from "@/hooks/useTabState";
 
 interface TaskDetailsProps {
   task: Tables<'Tasks'> | null;
@@ -32,6 +33,10 @@ export function TaskDetails({
   selectedVersion
 }: TaskDetailsProps) {
   const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
+  
+  // Use URL-based subtab state for exploration
+  const { tabState, setExplorationSubTab } = useTabState();
+  const activeSubTab = tabState.explorationSubTab || 'overview';
 
   if (!task) {
     return (
@@ -71,7 +76,7 @@ export function TaskDetails({
         {loadingData ? (
           <TaskLoadingIndicator progress={progress} />
         ) : dataset ? (
-          <Tabs defaultValue="overview" className="w-full">
+          <Tabs value={activeSubTab} onValueChange={setExplorationSubTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 mb-6 h-auto">
               <TabsTrigger value="overview" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
                 Overview

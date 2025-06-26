@@ -12,6 +12,7 @@ import { StatusBadge } from './ui/StatusBadge';
 import { VersionComparison } from "./version-history/VersionComparison";
 import { usePreprocessingPipeline } from '@/hooks/usePreprocessingPipeline';
 import { toast } from '@/components/ui/sonner';
+import { useTabState } from '@/hooks/useTabState';
 
 export interface TaskVersionTabsRef {
   selectTab: (tab: 'exploration' | 'preprocessing' | 'history' | 'compare') => void;
@@ -47,7 +48,10 @@ export const TaskVersionTabs = memo(forwardRef<TaskVersionTabsRef, TaskVersionTa
   isProcessing = false,
   currentStatus = null
 }: TaskVersionTabsProps, ref) {
-  const [activeTab, setActiveTab] = useState<string>('exploration');
+  // Use URL-based tab state
+  const { tabState, setMainTab } = useTabState();
+  const activeTab = tabState.mainTab;
+  
   const [selectedVersionId, setSelectedVersionId] = useState<number | undefined>(
     selectedVersion?.id || (versions.length > 0 ? versions[0].id : undefined)
   );
@@ -91,7 +95,7 @@ export const TaskVersionTabs = memo(forwardRef<TaskVersionTabsRef, TaskVersionTa
   
   // Handle tab change
   const handleTabChange = (value: string) => {
-    setActiveTab(value);
+    setMainTab(value as 'exploration' | 'preprocessing' | 'history' | 'compare');
     
     // Refresh data when switching to exploration tab
     if (value === 'exploration' && selectedVersion) {
@@ -104,7 +108,7 @@ export const TaskVersionTabs = memo(forwardRef<TaskVersionTabsRef, TaskVersionTa
   // Expose functions to parent components via ref
   useImperativeHandle(ref, () => ({
     selectTab: (tab: 'exploration' | 'preprocessing' | 'history' | 'compare') => {
-      handleTabChange(tab);
+      setMainTab(tab);
     },
     selectVersion: (version: TaskVersion) => {
       handleSelectVersion(version);
