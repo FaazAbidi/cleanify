@@ -1,7 +1,7 @@
 import { useSearchParams } from 'react-router-dom';
 import { useMemo, useCallback } from 'react';
 
-type MainTab = 'exploration' | 'preprocessing' | 'history' | 'compare';
+type MainTab = 'exploration' | 'pre-analysis' | 'preprocessing' | 'history' | 'compare';
 type ExplorationSubTab = 'overview' | 'quality' | 'columns' | 'datatypes' | 'correlation';
 type CompareSubTab = 'table' | 'visualizations';
 

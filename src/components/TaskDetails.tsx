@@ -82,17 +82,16 @@ export function TaskDetails({
                 Overview
               </TabsTrigger>
               <TabsTrigger value="quality" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
-                <span className="hidden sm:inline">Data </span>Quality
+                Data Quality
               </TabsTrigger>
               <TabsTrigger value="columns" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
-                <span className="hidden sm:inline">Column </span>Analysis
+                Column Analysis
               </TabsTrigger>
               <TabsTrigger value="datatypes" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
-                <span className="hidden sm:inline">Data </span>Types
+                Data Types
               </TabsTrigger>
               <TabsTrigger value="correlation" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
-                <span className="hidden lg:inline">Correlation</span>
-                <span className="lg:hidden">Corr</span>
+                Correlation
               </TabsTrigger>
             </TabsList>
             
