@@ -225,7 +225,7 @@ export function AppSidebar({ children }: { children: React.ReactNode }) {
               Contact our support team for assistance with any issues.
             </p>
             <p className="text-sm font-medium text-sidebar-primary">
-              supportsyed.abidi@stud.fra-uas.de
+              syed.abidi@stud.fra-uas.de
             </p>
           </div>
 
