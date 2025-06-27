@@ -31,5 +31,6 @@ export interface DatasetType {
   correlationData?: CorrelationData;
   missingValuesCount: number;
   duplicateRowsCount: number;
+  duplicateColumnsCount: number;
   dataTypes: Record<string, number>;
 }

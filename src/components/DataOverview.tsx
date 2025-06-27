@@ -47,6 +47,11 @@ export const DataOverview = ({ dataset, onSelectColumn }: DataOverviewProps) => 
       value: dataset.duplicateRowsCount,
       color: "#F97316", // Orange
     },
+    {
+      name: "Duplicate Columns",
+      value: dataset.duplicateColumnsCount,
+      color: "#EAB308", // Yellow
+    },
   ];
 
   return (
@@ -92,6 +97,15 @@ export const DataOverview = ({ dataset, onSelectColumn }: DataOverviewProps) => 
                 <span>
                   {((dataset.duplicateRowsCount / dataset.rows) * 100).toFixed(2)}% of
                   rows are duplicates
+                </span>
+              </div>
+            )}
+            
+            {dataset.duplicateColumnsCount > 0 && (
+              <div className="flex items-center mt-2 text-foreground">
+                <AlertTriangle className="h-5 w-5 mr-2 text-amber-500" />
+                <span>
+                  {dataset.duplicateColumnsCount} duplicate column{dataset.duplicateColumnsCount > 1 ? 's' : ''} found
                 </span>
               </div>
             )}

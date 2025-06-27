@@ -69,25 +69,47 @@ export const PreAnalysis = memo(function PreAnalysis({
     getOrCreatePreAnalysisTaskMethod
   } = usePreAnalysisPipeline();
 
-  // Check for existing pre-analysis result when component mounts or version changes
+  // Reset state and check for existing pre-analysis result when version changes
   useEffect(() => {
-    const checkExistingResult = async () => {
-      if (selectedVersion?.id) {
+    let isMounted = true; // Prevent state updates on unmounted component
+    
+    const handleVersionChange = async () => {
+      // First, clear all version-specific state when switching versions
+      if (isMounted) {
+        setAnalysisResult(null);
+        setTaskMethodId(null);
+        setUseSelectedColumns(false);
+        setSelectedColumns([]);
+        stopPolling(); // Stop any ongoing polling
+        resetConfig(); // Reset configuration to defaults
+      }
+      
+      // Then check for existing results for the new version
+      if (selectedVersion?.id && isMounted) {
         const { taskMethodId: tmId, result } = await getOrCreatePreAnalysisTaskMethod(selectedVersion.id);
-        if (tmId) {
-          setTaskMethodId(tmId);
+        if (isMounted) {
+          if (tmId) {
+            setTaskMethodId(tmId);
+          }
+          if (result) {
+            setAnalysisResult(result);
+            setIsConfigCollapsed(true); // Collapse form if results exist
+          } else {
+            setIsConfigCollapsed(false); // Expand form if no results
+          }
         }
-        if (result) {
-          setAnalysisResult(result);
-          setIsConfigCollapsed(true); // Collapse form if results exist
-        } else {
-          setIsConfigCollapsed(false); // Expand form if no results
-        }
+      } else if (isMounted) {
+        // Clear state when no version is selected
+        setIsConfigCollapsed(false);
       }
     };
 
-    checkExistingResult();
-  }, [selectedVersion?.id, getOrCreatePreAnalysisTaskMethod]);
+    handleVersionChange();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedVersion?.id]); // Simplified dependencies to prevent excessive calls
 
   // Handle column selection changes
   useEffect(() => {
@@ -139,10 +161,13 @@ export const PreAnalysis = memo(function PreAnalysis({
     setAnalysisResult(null);
     setTaskMethodId(null);
     stopPolling();
+    setIsConfigCollapsed(false); // Ensure form is expanded after reset
   };
 
   const availableColumns = dataset?.columns?.map(col => col.name) || [];
-  const targetColumns = useSelectedColumns ? selectedColumns : availableColumns;
+  // Ensure unique columns to prevent React key conflicts
+  const uniqueAvailableColumns = [...new Set(availableColumns)];
+  const targetColumns = useSelectedColumns ? [...new Set(selectedColumns)] : uniqueAvailableColumns;
 
   if (!task) {
     return (
@@ -199,8 +224,8 @@ export const PreAnalysis = memo(function PreAnalysis({
                 <SelectValue placeholder="Select a model" />
               </SelectTrigger>
               <SelectContent>
-                {modelOptions.map((model) => (
-                  <SelectItem key={model} value={model}>
+                {modelOptions.map((model, index) => (
+                  <SelectItem key={`model-${index}-${model}`} value={model}>
                     {model}
                   </SelectItem>
                 ))}
@@ -225,8 +250,8 @@ export const PreAnalysis = memo(function PreAnalysis({
             <div className="space-y-2">
               <Label>Select Columns</Label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto border rounded-md p-3">
-                {availableColumns.map((column) => (
-                  <div key={column} className="flex items-center space-x-2">
+                {uniqueAvailableColumns.map((column, index) => (
+                  <div key={`column-${index}-${column}`} className="flex items-center space-x-2">
                     <Checkbox
                       id={`column-${column}`}
                       checked={selectedColumns.includes(column)}
@@ -258,9 +283,9 @@ export const PreAnalysis = memo(function PreAnalysis({
                 <SelectValue placeholder="Select target column (optional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">No target</SelectItem>
-                {targetColumns.map((column) => (
-                  <SelectItem key={column} value={column}>
+                <SelectItem key="none-target" value="none">No target</SelectItem>
+                {targetColumns.map((column, index) => (
+                  <SelectItem key={`target-${index}-${column}`} value={column}>
                     {column}
                   </SelectItem>
                 ))}

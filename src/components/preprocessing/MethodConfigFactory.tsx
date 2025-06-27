@@ -9,6 +9,7 @@ import { SamplingHandler } from './SamplingHandler';
 import { OneHotEncodingHandler } from './OneHotEncodingHandler';
 import { LabelEncodingHandler } from './LabelEncodingHandler';
 import { DropColumnsHandler } from './DropColumnsHandler';
+import { DropDuplicatesHandler } from './DropDuplicatesHandler';
 import { CombineFeaturesHandler } from './CombineFeaturesHandler';
 import { BinningHandler } from './BinningHandler';
 import { PCAHandler } from './PCAHandler';
@@ -133,6 +134,15 @@ export function MethodConfigFactory({
     case 'perform_drop_columns':
       return (
         <DropColumnsHandler
+          dataset={dataset}
+          onSubmit={onSubmit}
+          onCancel={onCancel}
+          isLoading={isLoading}
+        />
+      );
+    case 'perform_drop_duplicates':
+      return (
+        <DropDuplicatesHandler
           dataset={dataset}
           onSubmit={onSubmit}
           onCancel={onCancel}

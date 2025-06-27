@@ -188,6 +188,11 @@ export function useTaskData() {
     return data.length - uniqueRows.size;
   };
 
+  const countDuplicateColumns = (columnNames: string[]): number => {
+    const uniqueColumnNames = new Set(columnNames);
+    return columnNames.length - uniqueColumnNames.size;
+  };
+
   // Helper function to retry API calls
   const retryFetch = async (fetchFn: () => Promise<any>, retries = MAX_RETRIES): Promise<any> => {
     try {
@@ -327,6 +332,9 @@ export function useTaskData() {
           resolve(countDuplicateRows(rowData));
         }, 0);
       });
+
+      // Calculate duplicate columns
+      const duplicateColumnsCount = countDuplicateColumns(headers);
       
       setProcessingProgress(70);
       
@@ -339,6 +347,7 @@ export function useTaskData() {
         columnNames: headers,
         missingValuesCount,
         duplicateRowsCount,
+        duplicateColumnsCount,
         dataTypes,
         correlationData: { matrix: [], labels: [] }
       };

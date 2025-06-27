@@ -100,7 +100,7 @@ export interface PreAnalysisResult {
 
 export type Technique = 'data_cleaning' | 'data_transformation' | 'data_reduction' | 'pre_analysis' | 'feature_engineering';
 
-export type Method = 'fix_missing' | 'perform_binning' | 'perform_combine_features' | 'perform_drop_columns' | 'fix_inconsistencies' | 'perform_label_encoding' | 'perform_normalization' | 'perform_one_hot_encoding' | 'fix_outliers' | 'perform_pca_reduction' | 'perform_sampling' | 'fix_skewness' | 'perform_standarization'
+export type Method = 'fix_missing' | 'perform_binning' | 'perform_combine_features' | 'perform_drop_columns' | 'perform_drop_duplicates' | 'fix_inconsistencies' | 'perform_label_encoding' | 'perform_normalization' | 'perform_one_hot_encoding' | 'fix_outliers' | 'perform_pca_reduction' | 'perform_sampling' | 'fix_skewness' | 'perform_standarization'
 
 export type ColumnMethod = ImputationMethod | SkewnessMethod | CombinationMethod | BinningMethod;
 
