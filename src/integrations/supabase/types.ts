@@ -1,3 +1,6 @@
+Need to install the following packages:
+supabase@2.26.9
+Ok to proceed? (y) 
 export type Json =
   | string
   | number
@@ -7,6 +10,31 @@ export type Json =
   | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          operationName?: string
+          query?: string
+          variables?: Json
+          extensions?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       Categories: {
@@ -154,6 +182,7 @@ export type Database = {
           id: number
           method_id: number | null
           name: string
+          pre_analysis: Json | null
           prev_version: number | null
           processed_file: number | null
           status: Database["public"]["Enums"]["status"]
@@ -165,6 +194,7 @@ export type Database = {
           id?: number
           method_id?: number | null
           name: string
+          pre_analysis?: Json | null
           prev_version?: number | null
           processed_file?: number | null
           status: Database["public"]["Enums"]["status"]
@@ -176,6 +206,7 @@ export type Database = {
           id?: number
           method_id?: number | null
           name?: string
+          pre_analysis?: Json | null
           prev_version?: number | null
           processed_file?: number | null
           status?: Database["public"]["Enums"]["status"]
@@ -406,6 +437,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       category: ["cat_1", "cat_2", "cat_3"],

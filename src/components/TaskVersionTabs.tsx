@@ -5,6 +5,7 @@ import { DatasetType } from "@/types/dataset";
 import { TaskDetails } from "@/components/TaskDetails";
 import { TaskVersion } from "@/types/version";
 import { PreprocessingPanel } from "@/components/preprocessing/PreprocessingPanel";
+import { PreAnalysis } from "@/components/PreAnalysis";
 import { VersionHistory } from "@/components/version-history/VersionHistory";
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Info } from 'lucide-react';
@@ -15,7 +16,7 @@ import { toast } from '@/components/ui/sonner';
 import { useTabState } from '@/hooks/useTabState';
 
 export interface TaskVersionTabsRef {
-  selectTab: (tab: 'exploration' | 'preprocessing' | 'history' | 'compare') => void;
+  selectTab: (tab: 'exploration' | 'pre-analysis' | 'preprocessing' | 'history' | 'compare') => void;
   selectVersion: (version: TaskVersion) => void;
 }
 
@@ -95,7 +96,7 @@ export const TaskVersionTabs = memo(forwardRef<TaskVersionTabsRef, TaskVersionTa
   
   // Handle tab change
   const handleTabChange = (value: string) => {
-    setMainTab(value as 'exploration' | 'preprocessing' | 'history' | 'compare');
+    setMainTab(value as 'exploration' | 'pre-analysis' | 'preprocessing' | 'history' | 'compare');
     
     // Refresh data when switching to exploration tab
     if (value === 'exploration' && selectedVersion) {
@@ -107,7 +108,7 @@ export const TaskVersionTabs = memo(forwardRef<TaskVersionTabsRef, TaskVersionTa
   
   // Expose functions to parent components via ref
   useImperativeHandle(ref, () => ({
-    selectTab: (tab: 'exploration' | 'preprocessing' | 'history' | 'compare') => {
+    selectTab: (tab: 'exploration' | 'pre-analysis' | 'preprocessing' | 'history' | 'compare') => {
       setMainTab(tab);
     },
     selectVersion: (version: TaskVersion) => {
@@ -117,9 +118,12 @@ export const TaskVersionTabs = memo(forwardRef<TaskVersionTabsRef, TaskVersionTa
   
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-      <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-6 h-auto">
+      <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 mb-6 h-auto">
         <TabsTrigger value="exploration" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
-          <span className="hidden sm:inline">Data </span>Exploration
+          Data Exploration
+        </TabsTrigger>
+        <TabsTrigger value="pre-analysis" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+          Pre-Analysis
         </TabsTrigger>
         <TabsTrigger value="preprocessing" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
           Preprocessing
@@ -161,6 +165,15 @@ export const TaskVersionTabs = memo(forwardRef<TaskVersionTabsRef, TaskVersionTa
         />
         )}
       </TabsContent>    
+      
+      <TabsContent value="pre-analysis" className="w-full">
+        <PreAnalysis
+          task={task}
+          dataset={dataset}
+          selectedVersion={versions.find(v => v.id === selectedVersionId) || selectedVersion}
+          isUnprocessedVersion={localIsUnprocessedVersion}
+        />
+      </TabsContent>
       
       <TabsContent value="preprocessing" className="w-full">
         {task ? (
