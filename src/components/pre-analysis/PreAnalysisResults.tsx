@@ -54,9 +54,10 @@ interface RecommendationCardProps {
   variant?: 'info' | 'warning' | 'success';
   items?: string[];
   counts?: Array<{ column: string; count: number }>;
+  noDataMessage?: string;
 }
 
-const RecommendationCard = ({ title, recommendation, icon: Icon, variant = 'info', items, counts }: RecommendationCardProps) => {
+const RecommendationCard = ({ title, recommendation, icon: Icon, variant = 'info', items, counts, noDataMessage = "No columns require attention for this analysis" }: RecommendationCardProps) => {
   const variantStyles = {
     info: 'border-border bg-muted/30',
     warning: 'border-orange-200 bg-orange-50/50 dark:border-orange-800/30 dark:bg-orange-950/20',
@@ -106,7 +107,7 @@ const RecommendationCard = ({ title, recommendation, icon: Icon, variant = 'info
           </div>
         ) : (
           <div className="text-center py-4">
-            <p className="text-muted-foreground text-sm">No columns require this type of encoding</p>
+            <p className="text-muted-foreground text-sm">{noDataMessage}</p>
           </div>
         )}
         
@@ -217,6 +218,7 @@ export const PreAnalysisResults = memo(function PreAnalysisResults({
                   icon={AlertTriangle}
                   variant={pa_cleaning.outliers.outlier_info.length > 0 ? 'warning' : 'success'}
                   counts={pa_cleaning.outliers.outlier_info}
+                  noDataMessage="No outliers detected in the data"
                 />
 
                 <RecommendationCard
@@ -224,6 +226,7 @@ export const PreAnalysisResults = memo(function PreAnalysisResults({
                   recommendation={pa_cleaning.duplicates.recommendation}
                   icon={Users}
                   variant={pa_cleaning.duplicates.exists ? 'warning' : 'success'}
+                  noDataMessage="No duplicate records found"
                 />
 
                 <RecommendationCard
@@ -232,6 +235,7 @@ export const PreAnalysisResults = memo(function PreAnalysisResults({
                   icon={Database}
                   variant={pa_cleaning.missing_columns.missing_info.length > 0 ? 'warning' : 'success'}
                   counts={pa_cleaning.missing_columns.missing_info}
+                  noDataMessage="No missing values found in any column"
                 />
 
                 <RecommendationCard
@@ -240,6 +244,7 @@ export const PreAnalysisResults = memo(function PreAnalysisResults({
                   icon={AlertTriangle}
                   variant={pa_cleaning.inconsistencies.inconsistent_info.length > 0 ? 'warning' : 'success'}
                   counts={pa_cleaning.inconsistencies.inconsistent_info}
+                  noDataMessage="No data inconsistencies detected"
                 />
               </div>
             </TabsContent>
@@ -253,6 +258,7 @@ export const PreAnalysisResults = memo(function PreAnalysisResults({
                   icon={TrendingUp}
                   variant={pa_transformation.skewed_columns.columns.length > 0 ? 'warning' : 'success'}
                   items={pa_transformation.skewed_columns.columns}
+                  noDataMessage="No skewed columns detected"
                 />
 
                 <RecommendationCard
@@ -261,6 +267,7 @@ export const PreAnalysisResults = memo(function PreAnalysisResults({
                   icon={Target}
                   variant={pa_transformation.columns_require_normalization.columns.length > 0 ? 'info' : 'success'}
                   items={pa_transformation.columns_require_normalization.columns}
+                  noDataMessage="No columns require normalization"
                 />
 
                 <RecommendationCard
@@ -269,6 +276,7 @@ export const PreAnalysisResults = memo(function PreAnalysisResults({
                   icon={Zap}
                   variant={pa_transformation.columns_require_standardization.columns.length > 0 ? 'info' : 'success'}
                   items={pa_transformation.columns_require_standardization.columns}
+                  noDataMessage="No columns require standardization"
                 />
               </div>
             </TabsContent>
@@ -362,6 +370,7 @@ export const PreAnalysisResults = memo(function PreAnalysisResults({
                   icon={Target}
                   variant="info"
                   items={pa_feature_engineering.columns_require_label_encoding.columns}
+                  noDataMessage="No columns require label encoding"
                 />
 
                 <RecommendationCard
@@ -370,6 +379,7 @@ export const PreAnalysisResults = memo(function PreAnalysisResults({
                   icon={Zap}
                   variant="info"
                   items={pa_feature_engineering.columns_require_one_hot_encoding.columns}
+                  noDataMessage="No columns require one-hot encoding"
                 />
               </div>
             </TabsContent>
