@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { DatasetType } from "@/types/dataset";
 import { Tables } from "@/integrations/supabase/types";
-import { calculateColumnStats, inferDataType } from "@/lib/data-utils";
+import { calculateColumnStats, inferDataType, detectCSVSeparator } from "@/lib/data-utils";
 import { useToast } from "@/components/ui/use-toast";
 import { TaskVersion } from "@/types/version";
 
@@ -250,8 +250,12 @@ export function useTaskData() {
       
       // Parse the CSV data
       const text = await fileData.text();
+      
+      // Detect the CSV separator (comma or semicolon)
+      const separator = detectCSVSeparator(text);
+      
       const lines = text.trim().split('\n');
-      const headers = lines[0].split(',');
+      const headers = lines[0].split(separator);
       
       // Sample the data if it's very large to prevent browser crashes
       const MAX_ROWS = 5000;
@@ -263,14 +267,14 @@ export function useTaskData() {
           ...lines.slice(1, Math.floor(MAX_ROWS/2) + 1),
           ...lines.slice(lines.length - Math.ceil(MAX_ROWS/2))
         ];
-        rowData = sampleRows.map(line => line.split(','));
+        rowData = sampleRows.map(line => line.split(separator));
         
         toast({
           title: "Large dataset detected",
           description: `Showing a sample of ${MAX_ROWS} rows out of ${lines.length - 1} total rows`,
         });
       } else {
-        rowData = lines.slice(1).map(line => line.split(','));
+        rowData = lines.slice(1).map(line => line.split(separator));
       }
       
       setProcessingProgress(20);

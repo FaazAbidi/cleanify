@@ -227,17 +227,19 @@ export const PreAnalysisResults = memo(function PreAnalysisResults({
                 />
 
                 <RecommendationCard
-                  title="Missing Values Analysis"
-                  recommendation={pa_cleaning.missing_overall.recommendation}
+                  title="Missing Values by Column"
+                  recommendation={pa_cleaning.missing_columns.recommendation}
                   icon={Database}
-                  variant={pa_cleaning.missing_overall.exists ? 'warning' : 'success'}
+                  variant={pa_cleaning.missing_columns.missing_info.length > 0 ? 'warning' : 'success'}
+                  counts={pa_cleaning.missing_columns.missing_info}
                 />
 
                 <RecommendationCard
                   title="Data Inconsistencies"
                   recommendation={pa_cleaning.inconsistencies.recommendation}
                   icon={AlertTriangle}
-                  variant="info"
+                  variant={pa_cleaning.inconsistencies.inconsistent_info.length > 0 ? 'warning' : 'success'}
+                  counts={pa_cleaning.inconsistencies.inconsistent_info}
                 />
               </div>
             </TabsContent>
@@ -285,21 +287,12 @@ export const PreAnalysisResults = memo(function PreAnalysisResults({
                           <span className="font-semibold">Principal Component Analysis (PCA)</span>
                         </div>
                         <Badge 
-                          variant={pa_reduction.is_pca_required.length > 0 ? "default" : "secondary"} 
+                          variant={pa_reduction.is_pca_required ? "default" : "secondary"} 
                           className="px-4 py-2 text-base font-bold"
                         >
-                          {pa_reduction.is_pca_required.length > 0 ? "Yes" : "No"}
+                          {pa_reduction.is_pca_required ? "Required" : "Not Required"}
                         </Badge>
                       </div>
-                      {pa_reduction.is_pca_required.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-3">
-                          {pa_reduction.is_pca_required.map((item, index) => (
-                            <Badge key={index} variant="outline" className="px-2 py-1 text-xs">
-                              {typeof item === 'string' ? item : JSON.stringify(item)}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
                     </CardContent>
                   </Card>
 
@@ -315,7 +308,7 @@ export const PreAnalysisResults = memo(function PreAnalysisResults({
                           variant={pa_reduction.is_sampling_required ? "default" : "secondary"} 
                           className="px-4 py-2 text-base font-bold"
                         >
-                          {pa_reduction.is_sampling_required ? "Yes" : "No"}
+                          {pa_reduction.is_sampling_required ? "Required" : "Not Required"}
                         </Badge>
                       </div>
                     </CardContent>
@@ -333,7 +326,7 @@ export const PreAnalysisResults = memo(function PreAnalysisResults({
                           variant={pa_reduction.high_dimensionality_exists ? "destructive" : "secondary"} 
                           className="px-4 py-2 text-base font-bold"
                         >
-                          {pa_reduction.high_dimensionality_exists ? "Yes" : "No"}
+                          {pa_reduction.high_dimensionality_exists ? "Detected" : "Not Detected"}
                         </Badge>
                       </div>
                     </CardContent>
@@ -342,27 +335,18 @@ export const PreAnalysisResults = memo(function PreAnalysisResults({
                   {/* Multicollinearity */}
                   <Card className="border-border bg-muted/30">
                     <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <AlertTriangle className="h-5 w-5 text-muted-foreground" />
                           <span className="font-semibold">Multicollinearity</span>
                         </div>
                         <Badge 
-                          variant={Object.keys(pa_reduction.multicollinearity_exists).length > 0 ? "destructive" : "secondary"} 
+                          variant={pa_reduction.multicollinearity_exists ? "destructive" : "secondary"} 
                           className="px-4 py-2 text-base font-bold"
                         >
-                          {Object.keys(pa_reduction.multicollinearity_exists).length > 0 ? "Yes" : "No"}
+                          {pa_reduction.multicollinearity_exists ? "Detected" : "Not Detected"}
                         </Badge>
                       </div>
-                      {Object.keys(pa_reduction.multicollinearity_exists).length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {Object.entries(pa_reduction.multicollinearity_exists).map(([key, value], index) => (
-                            <Badge key={index} variant="outline" className="px-2 py-1 text-xs">
-                              {key}: {String(value)}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -377,13 +361,7 @@ export const PreAnalysisResults = memo(function PreAnalysisResults({
                   recommendation={pa_feature_engineering.columns_require_label_encoding.recommendation}
                   icon={Target}
                   variant="info"
-                  items={
-                    pa_feature_engineering.columns_require_label_encoding.columns && 
-                    typeof pa_feature_engineering.columns_require_label_encoding.columns === 'object' &&
-                    !Array.isArray(pa_feature_engineering.columns_require_label_encoding.columns)
-                      ? Object.keys(pa_feature_engineering.columns_require_label_encoding.columns)
-                      : []
-                  }
+                  items={pa_feature_engineering.columns_require_label_encoding.columns}
                 />
 
                 <RecommendationCard
@@ -391,13 +369,7 @@ export const PreAnalysisResults = memo(function PreAnalysisResults({
                   recommendation={pa_feature_engineering.columns_require_one_hot_encoding.recommendation}
                   icon={Zap}
                   variant="info"
-                  items={
-                    pa_feature_engineering.columns_require_one_hot_encoding.columns && 
-                    typeof pa_feature_engineering.columns_require_one_hot_encoding.columns === 'object' &&
-                    !Array.isArray(pa_feature_engineering.columns_require_one_hot_encoding.columns)
-                      ? Object.keys(pa_feature_engineering.columns_require_one_hot_encoding.columns)
-                      : []
-                  }
+                  items={pa_feature_engineering.columns_require_one_hot_encoding.columns}
                 />
               </div>
             </TabsContent>
@@ -406,4 +378,4 @@ export const PreAnalysisResults = memo(function PreAnalysisResults({
       </Card>
     </div>
   );
-}); 
+});

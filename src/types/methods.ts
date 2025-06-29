@@ -54,10 +54,10 @@ export interface PreAnalysisResult {
     };
     inconsistencies: {
       recommendation: string;
-      inconsistent_info: Array<any>;
+      inconsistent_info: Array<{ column: string; count: number }>;
     };
     missing_columns: {
-      missing_info: Array<any>;
+      missing_info: Array<{ column: string; count: number }>;
       recommendation: string;
     };
     missing_overall: {
@@ -67,9 +67,9 @@ export interface PreAnalysisResult {
     };
   };
   pa_reduction: {
-    is_pca_required: Array<any>;
+    is_pca_required: boolean;
     is_sampling_required: boolean;
-    multicollinearity_exists: Record<string, any>;
+    multicollinearity_exists: boolean;
     high_dimensionality_exists: boolean;
   };
   pa_transformation: {
@@ -88,11 +88,11 @@ export interface PreAnalysisResult {
   };
   pa_feature_engineering: {
     columns_require_label_encoding: {
-      columns: Record<string, any>;
+      columns: string[];
       recommendation: string;
     };
     columns_require_one_hot_encoding: {
-      columns: Record<string, any>;
+      columns: string[];
       recommendation: string;
     };
   };

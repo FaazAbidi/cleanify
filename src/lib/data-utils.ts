@@ -277,3 +277,86 @@ export const getSkewedColumns = (dataset: any[][], columnNames: string[], thresh
   
   return skewedColumns;
 };
+
+/**
+ * Detect CSV separator by analyzing the first few lines of CSV text
+ * @param csvText The raw CSV text content
+ * @param maxLinesToCheck Maximum number of lines to analyze (default: 5)
+ * @returns The detected separator (',' or ';')
+ */
+export const detectCSVSeparator = (csvText: string, maxLinesToCheck: number = 5): ',' | ';' => {
+  const lines = csvText.trim().split('\n').slice(0, maxLinesToCheck);
+  
+  if (lines.length === 0) {
+    return ','; // Default to comma if no content
+  }
+  
+  let commaCount = 0;
+  let semicolonCount = 0;
+  let commaConsistency = 0;
+  let semicolonConsistency = 0;
+  
+  // Count occurrences and check consistency across lines
+  const commaCountsPerLine: number[] = [];
+  const semicolonCountsPerLine: number[] = [];
+  
+  lines.forEach(line => {
+    const commasInLine = (line.match(/,/g) || []).length;
+    const semicolonsInLine = (line.match(/;/g) || []).length;
+    
+    commaCount += commasInLine;
+    semicolonCount += semicolonsInLine;
+    commaCountsPerLine.push(commasInLine);
+    semicolonCountsPerLine.push(semicolonsInLine);
+  });
+  
+  // Calculate consistency (how uniform the separator count is across lines)
+  // High consistency means the separator count is similar across lines
+  if (commaCountsPerLine.length > 1) {
+    const avgCommas = commaCount / commaCountsPerLine.length;
+    const avgSemicolons = semicolonCount / semicolonCountsPerLine.length;
+    
+    // Calculate standard deviation to measure consistency
+    const commaVariance = commaCountsPerLine.reduce((sum, count) => 
+      sum + Math.pow(count - avgCommas, 2), 0) / commaCountsPerLine.length;
+    const semicolonVariance = semicolonCountsPerLine.reduce((sum, count) => 
+      sum + Math.pow(count - avgSemicolons, 2), 0) / semicolonCountsPerLine.length;
+    
+    // Lower variance means higher consistency
+    commaConsistency = 1 / (1 + Math.sqrt(commaVariance));
+    semicolonConsistency = 1 / (1 + Math.sqrt(semicolonVariance));
+  }
+  
+  // Decision logic:
+  // 1. If one separator has much higher count, choose it
+  // 2. If counts are similar, choose the one with higher consistency
+  // 3. If no clear winner, default to comma
+  
+  if (commaCount === 0 && semicolonCount === 0) {
+    return ','; // No separators found, default to comma
+  }
+  
+  if (commaCount === 0) {
+    return ';'; // Only semicolons found
+  }
+  
+  if (semicolonCount === 0) {
+    return ','; // Only commas found
+  }
+  
+  // Both separators present, use heuristics to decide
+  const commaScore = commaCount * commaConsistency;
+  const semicolonScore = semicolonCount * semicolonConsistency;
+  
+  // If one separator appears at least 3x more frequently, prefer it
+  if (commaCount >= semicolonCount * 3) {
+    return ',';
+  }
+  
+  if (semicolonCount >= commaCount * 3) {
+    return ';';
+  }
+  
+  // Otherwise, choose based on combined score of frequency and consistency
+  return commaScore >= semicolonScore ? ',' : ';';
+};

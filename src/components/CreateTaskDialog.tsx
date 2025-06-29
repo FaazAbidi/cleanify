@@ -23,7 +23,24 @@ export const CreateTaskDialog = ({ open, onOpenChange, onTaskCreated }: CreateTa
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      
+      // Check file size - 50MB = 50 * 1024 * 1024 bytes = 52,428,800 bytes
+      const maxSizeInBytes = 50 * 1024 * 1024;
+      
+      if (selectedFile.size >= maxSizeInBytes) {
+        toast({
+          title: "File Too Large",
+          description: `File size must be less than 50MB. Your file is ${(selectedFile.size / 1048576).toFixed(2)} MB.`,
+          variant: "destructive",
+        });
+        // Clear the file input
+        e.target.value = '';
+        setFile(null);
+        return;
+      }
+      
+      setFile(selectedFile);
     }
   };
 
@@ -174,7 +191,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, onTaskCreated }: CreateTa
         <DialogHeader>
           <DialogTitle>Create New Task</DialogTitle>
           <DialogDescription>
-            Create a new data preprocessing task by uploading your CSV file.
+            Create a new data preprocessing task by uploading your CSV file. Supports both comma (,) and semicolon (;) separated values.
           </DialogDescription>
         </DialogHeader>
         
