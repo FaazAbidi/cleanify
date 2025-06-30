@@ -189,8 +189,10 @@ export function useTaskData() {
   };
 
   const countDuplicateColumns = (columnNames: string[]): number => {
-    const uniqueColumnNames = new Set(columnNames);
-    return columnNames.length - uniqueColumnNames.size;
+    // Trim column names to handle any whitespace/carriage return characters
+    const trimmedColumnNames = columnNames.map(name => name.trim());
+    const uniqueColumnNames = new Set(trimmedColumnNames);
+    return trimmedColumnNames.length - uniqueColumnNames.size;
   };
 
   // Helper function to retry API calls
@@ -255,7 +257,7 @@ export function useTaskData() {
       const separator = detectCSVSeparator(text);
       
       const lines = text.trim().split('\n');
-      const headers = lines[0].split(separator);
+      const headers = lines[0].split(separator).map(header => header.trim());
       
       // Sample the data if it's very large to prevent browser crashes
       const MAX_ROWS = 5000;
@@ -267,14 +269,14 @@ export function useTaskData() {
           ...lines.slice(1, Math.floor(MAX_ROWS/2) + 1),
           ...lines.slice(lines.length - Math.ceil(MAX_ROWS/2))
         ];
-        rowData = sampleRows.map(line => line.split(separator));
+        rowData = sampleRows.map(line => line.split(separator).map(cell => cell.trim()));
         
         toast({
           title: "Large dataset detected",
           description: `Showing a sample of ${MAX_ROWS} rows out of ${lines.length - 1} total rows`,
         });
       } else {
-        rowData = lines.slice(1).map(line => line.split(separator));
+        rowData = lines.slice(1).map(line => line.split(separator).map(cell => cell.trim()));
       }
       
       setProcessingProgress(20);

@@ -46,7 +46,7 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
         <QualityCard 
           title="Uniqueness" 
           score={uniquenessScore}
-          description="Measures duplicate records"
+          description="Evaluates data diversity appropriately per column type"
         />
         <QualityCard 
           title="Consistency" 
@@ -92,10 +92,10 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
                           <li>High percentage of missing values detected</li>
                         )}
                         {uniquenessScore < 80 && (
-                          <li>Duplicate records found in the dataset</li>
+                          <li>Data diversity issues detected (duplicates in key columns or inappropriate uniqueness levels)</li>
                         )}
                         {consistencyScore < 80 && (
-                          <li>Inconsistent data types across columns</li>
+                          <li>Inconsistent data types or mixed data types within columns</li>
                         )}
                         {accuracyScore < 80 && (
                           <li>Potential outliers detected in numeric columns</li>
@@ -117,12 +117,12 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
                 )}
                 {uniquenessScore < 100 && (
                   <li>
-                    Remove or merge duplicate records
+                    Address data diversity issues: remove duplicates in identifier columns, verify categorical distributions
                   </li>
                 )}
                 {consistencyScore < 100 && (
                   <li>
-                    Standardize data types and formats across columns
+                    Standardize data types and formats across columns, and resolve mixed data types within individual columns
                   </li>
                 )}
                 {accuracyScore < 100 && (
@@ -179,6 +179,16 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
                         <span className="text-muted-foreground">Skewness</span>
                         <span className={column.isSkewed ? "text-amber-600 dark:text-amber-400 font-medium" : "text-foreground"}>
                           {column.skewness.toFixed(2)} {column.isSkewed && "(Significant)"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  {column.hasMixedTypes && (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Data Type Consistency</span>
+                        <span className="text-red-600 dark:text-red-400 font-medium">
+                          Mixed Types ({((column.inconsistencyRatio || 0) * 100).toFixed(1)}% inconsistent)
                         </span>
                       </div>
                     </div>
@@ -246,7 +256,7 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
                           </div>
                         </div>
                       </div>
-                    ))}
+                    )                  )}
                 </div>
                 
                 {dataset.columns.filter(col => col.type === 'numeric' && col.skewness !== undefined && col.isSkewed).length === 0 && (
@@ -274,6 +284,101 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
           ) : (
             <div className="text-center py-4 text-muted-foreground">
               Skewness information not available. Run the data analysis again to calculate skewness.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Data Type Consistency</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {dataset.columns.some(col => col.hasMixedTypes) ? (
+            <div className="space-y-6">
+              <div className="text-sm text-muted-foreground">
+                <p>Mixed data types within a column can cause issues during analysis and modeling. 
+                   These columns contain different types of values (e.g., both numbers and text) that should be standardized.</p>
+              </div>
+              
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium">Columns with Mixed Data Types</h4>
+                <div className="grid gap-4 md:grid-cols-1">
+                  {dataset.columns
+                    .filter(col => col.hasMixedTypes && col.typeBreakdown)
+                    .map(col => (
+                      <div key={col.name} className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="font-medium text-foreground">{col.name}</div>
+                            <div className="text-xs text-red-600 dark:text-red-400 font-medium">
+                              {((col.inconsistencyRatio || 0) * 100).toFixed(1)}% inconsistent
+                            </div>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Classified as: <span className="font-medium">{col.type}</span>
+                          </div>
+                          {col.typeBreakdown && (
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              {col.typeBreakdown.numeric > 0 && (
+                                <div className="flex justify-between">
+                                  <span>Numeric values:</span>
+                                  <span className="font-medium">{col.typeBreakdown.numeric}</span>
+                                </div>
+                              )}
+                              {col.typeBreakdown.string > 0 && (
+                                <div className="flex justify-between">
+                                  <span>Text values:</span>
+                                  <span className="font-medium">{col.typeBreakdown.string}</span>
+                                </div>
+                              )}
+                              {col.typeBreakdown.boolean > 0 && (
+                                <div className="flex justify-between">
+                                  <span>Boolean values:</span>
+                                  <span className="font-medium">{col.typeBreakdown.boolean}</span>
+                                </div>
+                              )}
+                              {col.typeBreakdown.null > 0 && (
+                                <div className="flex justify-between">
+                                  <span>Missing values:</span>
+                                  <span className="font-medium">{col.typeBreakdown.null}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+                
+                {dataset.columns.filter(col => col.hasMixedTypes).length === 0 && (
+                  <div className="text-center py-4 text-muted-foreground">
+                    No mixed data type columns detected
+                  </div>
+                )}
+              </div>
+              
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium">Recommendations</h4>
+                <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
+                  <li>
+                    <strong>Convert inconsistent values:</strong> Standardize the data type by converting all values to the same format
+                  </li>
+                  <li>
+                    <strong>Handle numeric-in-text:</strong> If a categorical column contains mostly text but some numbers, convert numbers to text or vice versa
+                  </li>
+                  <li>
+                    <strong>Clean data entry errors:</strong> Check if mixed types are due to data entry mistakes (e.g., "N/A" instead of empty cells)
+                  </li>
+                  <li>
+                    <strong>Split columns:</strong> Consider splitting columns with fundamentally different data types into separate columns
+                  </li>
+                </ul>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-4 text-muted-foreground">
+              All columns have consistent data types
             </div>
           )}
         </CardContent>
@@ -320,32 +425,106 @@ function calculateCompletenessScore(dataset: DatasetType): number {
 }
 
 function calculateUniquenessScore(dataset: DatasetType): number {
-  // Calculate uniqueness based on the ratio of unique values to total values
-  const totalCells = dataset.rows * dataset.columns.length;
-  if (totalCells === 0) return 100;
+  if (dataset.columns.length === 0 || dataset.rows === 0) return 100;
   
-  // Sum up unique values across all columns
-  const totalUniqueValues = dataset.columns.reduce((sum, col) => {
-    // For columns with unique values data, use that
-    if (col.uniqueValues !== undefined) {
-      return sum + col.uniqueValues;
-    }
-    // Otherwise estimate based on column type and missing values
+  let totalScore = 0;
+  let evaluatedColumns = 0;
+  
+  dataset.columns.forEach(col => {
     const nonMissingValues = dataset.rows - col.missingValues;
-    if (col.type === 'categorical') {
-      // Assume categorical columns have fewer unique values
-      return sum + Math.min(nonMissingValues, Math.ceil(nonMissingValues * 0.8));
-    } else if (col.type === 'numeric') {
-      // Numeric columns typically have more unique values
-      return sum + Math.min(nonMissingValues, Math.ceil(nonMissingValues * 0.95));
-    } else {
-      // Default assumption for other types
-      return sum + Math.min(nonMissingValues, Math.ceil(nonMissingValues * 0.9));
+    if (nonMissingValues === 0) return; // Skip empty columns
+    
+    const uniqueRatio = col.uniqueValues / nonMissingValues;
+    let columnScore = 100;
+    
+    // Different scoring logic based on data type
+    switch (col.type) {
+      case 'categorical':
+        // For categorical: Good if reasonable number of categories (not too few, not too many)
+        if (uniqueRatio < 0.01) {
+          // Too few categories (< 1% unique) - might be data entry error
+          columnScore = 60;
+        } else if (uniqueRatio > 0.8) {
+          // Too many categories (> 80% unique) - might be misclassified as categorical
+          columnScore = 70;
+        } else {
+          // Good categorical distribution
+          columnScore = 100;
+        }
+        break;
+        
+      case 'numeric':
+        // For numeric: Higher uniqueness is generally better
+        if (uniqueRatio > 0.9) {
+          columnScore = 100; // Excellent uniqueness
+        } else if (uniqueRatio > 0.7) {
+          columnScore = 90;  // Good uniqueness
+        } else if (uniqueRatio > 0.5) {
+          columnScore = 80;  // Moderate uniqueness
+        } else if (uniqueRatio > 0.3) {
+          columnScore = 70;  // Low uniqueness
+        } else {
+          columnScore = 50;  // Very low uniqueness - potential duplicate issue
+        }
+        break;
+        
+      case 'text':
+        // For text: Check if it looks like an identifier or free text
+        const avgLength = col.uniqueValues > 0 ? nonMissingValues / col.uniqueValues : 0;
+        
+        if (col.name.toLowerCase().includes('id') || col.name.toLowerCase().includes('key')) {
+          // Looks like an identifier - should be highly unique
+          if (uniqueRatio > 0.95) {
+            columnScore = 100;
+          } else if (uniqueRatio > 0.8) {
+            columnScore = 80;
+          } else {
+            columnScore = 40; // Duplicate IDs are bad!
+          }
+        } else {
+          // Regular text column - moderate uniqueness expected
+          if (uniqueRatio > 0.8) {
+            columnScore = 100;
+          } else if (uniqueRatio > 0.5) {
+            columnScore = 90;
+          } else if (uniqueRatio > 0.2) {
+            columnScore = 80;
+          } else {
+            columnScore = 70; // Low uniqueness might be okay for text
+          }
+        }
+        break;
+        
+      case 'boolean':
+        // For boolean: Should have very few unique values (ideally 2)
+        if (col.uniqueValues <= 2) {
+          columnScore = 100; // Perfect for boolean
+        } else if (col.uniqueValues <= 5) {
+          columnScore = 80;  // Might be okay (true/false/null/maybe some text)
+        } else {
+          columnScore = 60;  // Too many values for boolean
+        }
+        break;
+        
+      case 'datetime':
+        // For datetime: Higher uniqueness usually better (unless it's date categories)
+        if (uniqueRatio > 0.7) {
+          columnScore = 100;
+        } else if (uniqueRatio > 0.5) {
+          columnScore = 90;
+        } else if (uniqueRatio > 0.3) {
+          columnScore = 80;
+        } else {
+          columnScore = 75; // Many repeated dates might be intentional
+        }
+        break;
     }
-  }, 0);
+    
+    totalScore += columnScore;
+    evaluatedColumns++;
+  });
   
-  // Calculate uniqueness percentage
-  return Math.round((totalUniqueValues / totalCells) * 100);
+  return evaluatedColumns > 0 ? Math.round(totalScore / evaluatedColumns) : 100;
 }
 
 function calculateConsistencyScore(dataset: DatasetType): number {
@@ -364,6 +543,24 @@ function calculateConsistencyScore(dataset: DatasetType): number {
       columnScore -= 15;
     } else if (col.missingPercent > 10) {
       columnScore -= 5;
+    }
+    
+    // **NEW**: Check for mixed data types within the column
+    if (col.hasMixedTypes && col.inconsistencyRatio !== undefined) {
+      // More aggressive penalty system to ensure visibility in overall score
+      if (col.inconsistencyRatio > 0.3) {
+        columnScore -= 50; // Severe inconsistency (>30% minority types)
+      } else if (col.inconsistencyRatio > 0.2) {
+        columnScore -= 35; // Major inconsistency (>20% minority types)  
+      } else if (col.inconsistencyRatio > 0.1) {
+        columnScore -= 25; // Moderate inconsistency (>10% minority types)
+      } else if (col.inconsistencyRatio > 0.05) {
+        columnScore -= 20; // Minor inconsistency (>5% minority types)
+      } else if (col.inconsistencyRatio > 0.01) {
+        columnScore -= 15; // Small inconsistency (>1% minority types)
+      } else {
+        columnScore -= 10; // Very minor inconsistency (any mixed types)
+      }
     }
     
     // For categorical columns, check if they have reasonable number of categories

@@ -17,10 +17,17 @@ export const calculateColumnStats = (
     String(val).toUpperCase() !== 'NULL' &&
     !(typeof val === 'number' && isNaN(val))
   );
+  // Analyze data type consistency
+  const consistencyAnalysis = analyzeDataTypeConsistency(columnData);
+  
   const stats: Partial<ColumnInfo> = {
     uniqueValues: new Set(nonNullValues).size,
     missingValues: columnData.length - nonNullValues.length,
     missingPercent: ((columnData.length - nonNullValues.length) / columnData.length) * 100,
+    // Include consistency information
+    hasMixedTypes: consistencyAnalysis.hasMixedTypes,
+    inconsistencyRatio: consistencyAnalysis.inconsistencyRatio,
+    typeBreakdown: consistencyAnalysis.typeBreakdown,
   };
 
   if (type === 'numeric') {
@@ -225,6 +232,83 @@ export const calculateSkewness = (columnData: any[], threshold: number = 1): { s
   const isSkewed = Math.abs(skewness) > threshold;
   
   return { skewness, isSkewed };
+};
+
+/**
+ * Analyze data type consistency within a column
+ * Returns information about mixed data types
+ */
+export const analyzeDataTypeConsistency = (values: any[]): {
+  hasMixedTypes: boolean;
+  typeBreakdown: {
+    numeric: number;
+    string: number;
+    boolean: number;
+    null: number;
+    total: number;
+  };
+  inconsistencyRatio: number;
+} => {
+  const nonNullValues = values.filter(val => val !== null && val !== undefined && val !== '');
+  const totalValues = values.length;
+  
+  if (nonNullValues.length === 0) {
+    return {
+      hasMixedTypes: false,
+      typeBreakdown: { numeric: 0, string: 0, boolean: 0, null: totalValues, total: totalValues },
+      inconsistencyRatio: 0
+    };
+  }
+
+  let numericCount = 0;
+  let stringCount = 0;
+  let booleanCount = 0;
+  let nullCount = totalValues - nonNullValues.length;
+
+  nonNullValues.forEach(val => {
+    const strVal = String(val).toLowerCase().trim();
+    
+    // Check for boolean values first
+    if (strVal === 'true' || strVal === 'false' || val === true || val === false) {
+      booleanCount++;
+    }
+    // Check for numeric values
+    else if (!isNaN(Number(val)) && isFinite(Number(val))) {
+      numericCount++;
+    }
+    // Everything else is treated as string
+    else {
+      stringCount++;
+    }
+  });
+
+  const typeBreakdown = {
+    numeric: numericCount,
+    string: stringCount,
+    boolean: booleanCount,
+    null: nullCount,
+    total: totalValues
+  };
+
+  // Count how many different data types are present (ignoring nulls for this calculation)
+  const presentTypes = [
+    numericCount > 0,
+    stringCount > 0,
+    booleanCount > 0
+  ].filter(Boolean).length;
+
+  const hasMixedTypes = presentTypes > 1;
+  
+  // Calculate inconsistency ratio: what proportion of the data is "minority types"
+  const majorityCount = Math.max(numericCount, stringCount, booleanCount);
+  const minorityCount = nonNullValues.length - majorityCount;
+  const inconsistencyRatio = nonNullValues.length > 0 ? minorityCount / nonNullValues.length : 0;
+
+  return {
+    hasMixedTypes,
+    typeBreakdown,
+    inconsistencyRatio
+  };
 };
 
 /**

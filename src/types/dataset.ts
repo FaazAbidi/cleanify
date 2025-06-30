@@ -15,6 +15,16 @@ export interface ColumnInfo {
   outliers?: number;
   skewness?: number;
   isSkewed?: boolean;
+  // Data type consistency information
+  hasMixedTypes?: boolean;
+  inconsistencyRatio?: number;
+  typeBreakdown?: {
+    numeric: number;
+    string: number;
+    boolean: number;
+    null: number;
+    total: number;
+  };
 }
 
 export interface CorrelationData {
