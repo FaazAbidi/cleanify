@@ -47,10 +47,18 @@ export const DataTable = ({ dataset, highlightColumn }: DataTableProps) => {
     }
   };
 
-  // Filter columns based on search
-  const filteredColumns = dataset.columnNames.filter((col) =>
-    col.toLowerCase().includes(search.toLowerCase())
-  );
+  // Helper function to get display name for column
+  const getColumnDisplayName = (columnId: string) => {
+    const column = dataset.columns.find(col => col.name === columnId);
+    return column?.originalName || columnId;
+  };
+
+  // Filter columns based on search - search both original and unique names
+  const filteredColumns = dataset.columnNames.filter((col) => {
+    const displayName = getColumnDisplayName(col);
+    return displayName.toLowerCase().includes(search.toLowerCase()) || 
+           col.toLowerCase().includes(search.toLowerCase());
+  });
 
   // Split columns into pinned and unpinned
   const pinnedFilteredColumns = filteredColumns.filter(col => pinnedColumns.includes(col));
@@ -122,7 +130,7 @@ export const DataTable = ({ dataset, highlightColumn }: DataTableProps) => {
                   }}
                 >
                   <div className="flex items-center gap-1.5">
-                    <span>{column}</span>
+                    <span title={column}>{getColumnDisplayName(column)}</span>
                     <button
                       onClick={() => togglePinColumn(column)}
                       className="p-1 rounded-full hover:bg-muted"
@@ -143,7 +151,7 @@ export const DataTable = ({ dataset, highlightColumn }: DataTableProps) => {
                   )}
                 >
                   <div className="flex items-center gap-1.5">
-                    <span>{column}</span>
+                    <span title={column}>{getColumnDisplayName(column)}</span>
                     <button
                       onClick={() => togglePinColumn(column)}
                       className="p-1 rounded-full hover:bg-muted"

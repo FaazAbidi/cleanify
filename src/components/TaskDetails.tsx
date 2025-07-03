@@ -8,6 +8,7 @@ import { ColumnAnalysis } from "@/components/ColumnAnalysis";
 import { CorrelationAnalysis } from "@/components/CorrelationAnalysis";
 import { DataTypeManager } from "@/components/DataTypeManager";
 import { DataTable } from "@/components/DataTable";
+import { VirtualDataTable } from "@/components/VirtualDataTable";
 import { TaskLoadingIndicator } from "./TaskLoadingIndicator";
 import { TaskVersion } from "@/types/version";
 import { Badge } from "./ui/badge";
@@ -20,6 +21,7 @@ interface TaskDetailsProps {
   dataset: DatasetType | null;
   loadingData: boolean;
   progress: number;
+  processingStage?: string;
   onDatasetUpdate: (dataset: DatasetType) => void;
   selectedVersion?: TaskVersion | null;
 }
@@ -29,6 +31,7 @@ export function TaskDetails({
   dataset, 
   loadingData, 
   progress, 
+  processingStage,
   onDatasetUpdate,
   selectedVersion
 }: TaskDetailsProps) {
@@ -74,7 +77,11 @@ export function TaskDetails({
       </CardHeader>
       <CardContent className="w-full">
         {loadingData ? (
-          <TaskLoadingIndicator progress={progress} />
+          <TaskLoadingIndicator 
+            progress={progress} 
+            stage={processingStage}
+            showDetails={true}
+          />
         ) : dataset ? (
           <Tabs value={activeSubTab} onValueChange={setExplorationSubTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 mb-6 h-auto">
@@ -111,7 +118,8 @@ export function TaskDetails({
               <TabsContent value="datatypes" className="w-full">
                 <DataTypeManager 
                   dataset={dataset} 
-                  onDatasetUpdate={onDatasetUpdate} 
+                  onDatasetUpdate={onDatasetUpdate}
+                  versionId={selectedVersion?.id}
                 />
               </TabsContent>
               
@@ -121,7 +129,16 @@ export function TaskDetails({
 
               <div id="data-table-section" className="bg-card rounded-lg border p-6 shadow-sm mt-6 w-full">
                 <h2 className="text-lg font-semibold mb-4">Data Table</h2>
-                <DataTable dataset={dataset} highlightColumn={selectedColumn} />
+                {dataset.columnNames.length > 500 ? (
+                  <VirtualDataTable 
+                    dataset={dataset} 
+                    highlightColumn={selectedColumn}
+                    maxVisibleColumns={25}
+                    maxVisibleRows={50}
+                  />
+                ) : (
+                  <DataTable dataset={dataset} highlightColumn={selectedColumn} />
+                )}
               </div>
             </div>
           </Tabs>

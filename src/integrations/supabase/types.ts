@@ -1,6 +1,3 @@
-Need to install the following packages:
-supabase@2.26.9
-Ok to proceed? (y) 
 export type Json =
   | string
   | number
@@ -179,6 +176,7 @@ export type Database = {
         Row: {
           config: Json | null
           created_at: string
+          data_types: Json | null
           id: number
           method_id: number | null
           name: string
@@ -191,6 +189,7 @@ export type Database = {
         Insert: {
           config?: Json | null
           created_at?: string
+          data_types?: Json | null
           id?: number
           method_id?: number | null
           name: string
@@ -203,6 +202,7 @@ export type Database = {
         Update: {
           config?: Json | null
           created_at?: string
+          data_types?: Json | null
           id?: number
           method_id?: number | null
           name?: string

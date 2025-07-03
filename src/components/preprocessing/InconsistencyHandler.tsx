@@ -64,7 +64,7 @@ export function InconsistencyHandler({
     
     // Filter for columns that are numeric or categorical
     const supportedColumns = dataset.columns
-      .filter(column => column.type === 'numeric' || column.type === 'categorical')
+      .filter(column => column.type === 'QUANTITATIVE' || column.type === 'QUALITATIVE')
       .map(column => column.name);
     
     return supportedColumns;

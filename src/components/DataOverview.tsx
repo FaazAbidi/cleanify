@@ -1,11 +1,16 @@
 import { DatasetType } from "@/types/dataset";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, ScatterChart, Scatter, ZAxis } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { ChartBarBig, FileText, AlertTriangle, TableProperties, TrendingUp, Target, Clock } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { ChartBarBig, FileText, TableProperties, Download, Search, AlertCircle, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { formatBytes } from "@/lib/format";
-import { getCorrelationColor } from "@/lib/correlation-utils";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { PerformanceWarning } from "@/components/PerformanceWarning";
+
+const dataTypeIcons = {
+  QUANTITATIVE: <ChartBarBig className="h-5 w-5" />,
+  QUALITATIVE: <TableProperties className="h-5 w-5" />,
+};
 
 interface DataOverviewProps {
   dataset: DatasetType;
@@ -14,19 +19,8 @@ interface DataOverviewProps {
 
 export const DataOverview = ({ dataset, onSelectColumn }: DataOverviewProps) => {
   const dataTypeColors = {
-    numeric: "#0EA5E9", // Blue
-    categorical: "#10B981", // Green
-    datetime: "#8B5CF6", // Purple
-    text: "#F97316", // Orange
-    boolean: "#EAB308", // Yellow
-  };
-
-  const dataTypeIcons = {
-    numeric: <ChartBarBig className="h-5 w-5" />,
-    categorical: <TableProperties className="h-5 w-5" />,
-    datetime: <FileText className="h-5 w-5" />,
-    text: <FileText className="h-5 w-5" />,
-    boolean: <TableProperties className="h-5 w-5" />,
+    QUANTITATIVE: "#0EA5E9", // Blue
+    QUALITATIVE: "#10B981", // Green
   };
 
   const dataTypeData = Object.entries(dataset.dataTypes)
@@ -54,262 +48,248 @@ export const DataOverview = ({ dataset, onSelectColumn }: DataOverviewProps) => 
     },
   ];
 
+  // Get columns with most missing values (top 5)
+  const columnsWithMostMissing = dataset.columns
+    .filter(col => col.missingValues > 0)
+    .sort((a, b) => b.missingValues - a.missingValues)
+    .slice(0, 5);
+
+  // Get columns with most outliers (top 5)
+  const columnsWithMostOutliers = dataset.columns
+    .filter(col => col.outliers && col.outliers > 0 && col.type === 'QUANTITATIVE')
+    .sort((a, b) => (b.outliers || 0) - (a.outliers || 0))
+    .slice(0, 5);
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Dataset Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center pb-2 border-b">
-              <span className="font-medium">Filename</span>
-              <span className="text-foreground">{dataset.filename}</span>
-            </div>
-            <div className="flex justify-between items-center pb-2 border-b">
-              <span className="font-medium">Number of Rows</span>
-              <span className="text-foreground">{dataset.rows.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between items-center pb-2 border-b">
-              <span className="font-medium">Number of Columns</span>
-              <span className="text-foreground">{dataset.columns.length.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between items-center pb-2 border-b">
-              <span className="font-medium">Memory Usage (est.)</span>
-              <span className="text-foreground">
-                {formatBytes(dataset.rows * dataset.columns.length * 8)}
-              </span>
-            </div>
-            
-            {dataset.missingValuesCount > 0 && (
-              <div className="flex items-center mt-4 text-foreground">
-                <AlertTriangle className="h-5 w-5 mr-2 text-amber-500" />
-                <span>
-                  {((dataset.missingValuesCount / (dataset.rows * dataset.columns.length)) * 100).toFixed(2)}% of 
-                  all values are missing
-                </span>
-              </div>
-            )}
-            
-            {dataset.duplicateRowsCount > 0 && (
-              <div className="flex items-center mt-2 text-foreground">
-                <AlertTriangle className="h-5 w-5 mr-2 text-amber-500" />
-                <span>
-                  {((dataset.duplicateRowsCount / dataset.rows) * 100).toFixed(2)}% of
-                  rows are duplicates
-                </span>
-              </div>
-            )}
-            
-            {dataset.duplicateColumnsCount > 0 && (
-              <div className="flex items-center mt-2 text-foreground">
-                <AlertTriangle className="h-5 w-5 mr-2 text-amber-500" />
-                <span>
-                  {dataset.duplicateColumnsCount} duplicate column{dataset.duplicateColumnsCount > 1 ? 's' : ''} found
-                </span>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Column Types Distribution</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64">
-            <ChartContainer
-              config={{
-                value: {
-                  label: "Count",
-                  color: "hsl(var(--chart-1))",
-                },
-              }}
-              className="h-full w-full"
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={dataTypeData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {dataTypeData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={dataTypeColors[entry.name as keyof typeof dataTypeColors]} />
-                    ))}
-                  </Pie>
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                </PieChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </div>
-          
-          <div className="flex flex-wrap gap-2 mt-4">
-            {Object.entries(dataset.dataTypes)
-              .filter(([_, count]) => count > 0)
-              .map(([type, count]) => (
-                <Badge
-                  key={type}
-                  variant="outline"
-                  className="flex items-center gap-1 px-3 py-1"
+    <div className="space-y-6">
+      {/* Performance Warning */}
+      <PerformanceWarning 
+        rows={dataset.rows} 
+        columns={dataset.columns.length}
+      />
+      
+      {/* Data Types Distribution */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Data Types Distribution</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={200}>
+              <PieChart>
+                <Pie
+                  data={dataTypeData}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
                 >
-                  {dataTypeIcons[type as keyof typeof dataTypeIcons]}
-                  <span className="capitalize">{type}:</span> {count}
-                </Badge>
+                  {dataTypeData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={dataTypeColors[entry.name as keyof typeof dataTypeColors]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="mt-4 space-y-2">
+              {Object.entries(dataset.dataTypes)
+                .filter(([_, count]) => count > 0)
+                .map(([type, count]) => (
+                <div key={type} className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    {dataTypeIcons[type as keyof typeof dataTypeIcons]}
+                    <span className="ml-2 text-sm font-medium">{type}</span>
+                  </div>
+                  <Badge variant="secondary">{count}</Badge>
+                </div>
               ))}
-          </div>
-        </CardContent>
-      </Card>
+            </div>
+          </CardContent>
+        </Card>
 
-      <Card className="md:col-span-2">
-        <CardHeader>
-          <CardTitle className="text-lg">Data Quality Issues</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64">
-            <ChartContainer
-              config={{
-                value: {
-                  label: "Count",
-                  color: "hsl(var(--chart-1))",
-                },
-              }}
-              className="h-full w-full"
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dataQualityData}>
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="value">
-                    {dataQualityData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </div>
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Data Quality Overview</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={200}>
+              <PieChart>
+                <Pie
+                  data={dataQualityData}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {dataQualityData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="mt-4 space-y-2">
+              {dataQualityData.map((item) => (
+                <div key={item.name} className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{item.name}</span>
+                  <Badge variant="secondary">{item.value}</Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-      <MissingValuesOverview dataset={dataset} onSelectColumn={onSelectColumn} />
-      <OutlierSummary dataset={dataset} onSelectColumn={onSelectColumn} />
+      {/* Columns with Missing Values and Outliers */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-orange-500" />
+              Columns with Most Missing Values
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {columnsWithMostMissing.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">
+                No columns with missing values found
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {columnsWithMostMissing.map((column) => (
+                  <div 
+                    key={column.name} 
+                    className="space-y-2 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                    onClick={() => onSelectColumn?.(column.name)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm">{column.name}</span>
+                      <Badge variant="destructive" className="text-xs">
+                        {column.missingPercent.toFixed(1)}%
+                      </Badge>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Missing: {column.missingValues}</span>
+                        <span>Total: {dataset.rows}</span>
+                      </div>
+                      <Progress 
+                        value={column.missingPercent} 
+                        className="h-2"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-red-500" />
+              Columns with Most Outliers
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {columnsWithMostOutliers.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">
+                No columns with outliers found
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {columnsWithMostOutliers.map((column) => (
+                  <div 
+                    key={column.name} 
+                    className="space-y-2 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                    onClick={() => onSelectColumn?.(column.name)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm">{column.name}</span>
+                      <Badge variant="destructive" className="text-xs">
+                        {column.outliers} outliers
+                      </Badge>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Outliers: {column.outliers}</span>
+                        <span>Total: {dataset.rows}</span>
+                      </div>
+                      <Progress 
+                        value={((column.outliers || 0) / dataset.rows) * 100} 
+                        className="h-2"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
 
-// 2. Top Correlations Preview
-const MissingValuesOverview = ({ dataset, onSelectColumn }: { 
+// Supporting components
+interface DataOverviewCardProps {
   dataset: DatasetType;
-  onSelectColumn?: (columnName: string) => void;
-}) => {
-  // Get columns with missing values
-  const columnsWithMissingValues = dataset.columns
-    .filter(col => col.missingValues > 0)
-    .sort((a, b) => b.missingValues - a.missingValues)
-    .slice(0, 5);
-  
-  if (columnsWithMissingValues.length === 0) return null;
-  
-  const handleColumnClick = (columnName: string) => {
-    if (onSelectColumn) {
-      onSelectColumn(columnName);
-      
-      // Scroll to the data table
-      const dataTableElement = document.getElementById('data-table-section');
-      if (dataTableElement) {
-        dataTableElement.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
-  };
-  
+}
+
+export const DataOverviewCard = ({ dataset }: DataOverviewCardProps) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Top Columns with Missing Values</CardTitle>
+        <CardTitle>Dataset Overview</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
-          {columnsWithMissingValues.map((column, index) => (
-            <div 
-              key={`missing-${index}`} 
-              className="flex justify-between items-center p-2 rounded-md bg-amber-50 dark:bg-amber-950/20 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/20 transition-colors"
-              onClick={() => handleColumnClick(column.name)}
-              title="Click to view this column in the data table"
-            >
-              <div className="flex items-center">
-                <AlertTriangle className="h-4 w-4 mr-2 text-amber-500" />
-                <span className="font-medium">{column.name}</span>
-              </div>
-              <Badge variant="outline" className="ml-auto">
-                {column.missingValues.toLocaleString()} ({column.missingPercent.toFixed(1)}%)
-              </Badge>
-            </div>
-          ))}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm font-medium text-gray-600">Rows</p>
+            <p className="text-2xl font-bold">{dataset.rows.toLocaleString()}</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-600">Columns</p>
+            <p className="text-2xl font-bold">{dataset.columns.length}</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-600">Missing Values</p>
+            <p className="text-2xl font-bold text-red-600">{dataset.missingValuesCount}</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-600">Duplicate Rows</p>
+            <p className="text-2xl font-bold text-orange-600">{dataset.duplicateRowsCount}</p>
+          </div>
         </div>
       </CardContent>
     </Card>
   );
 };
 
-// 4. Outlier Detection Summary
-const OutlierSummary = ({ dataset, onSelectColumn }: { 
-  dataset: DatasetType; 
-  onSelectColumn?: (columnName: string) => void;
-}) => {
-  const columnsWithOutliers = dataset.columns
-    .filter(col => col.outliers && col.outliers > 0)
-    .sort((a, b) => (b.outliers || 0) - (a.outliers || 0))
-    .slice(0, 5);
-  
-  if (columnsWithOutliers.length === 0) return null;
-  
-  const outlierData = columnsWithOutliers.map(col => ({
-    name: col.name,
-    value: col.outliers || 0,
-    percent: ((col.outliers || 0) / dataset.rows * 100).toFixed(1)
-  }));
-  
-  const handleColumnClick = (columnName: string) => {
-    if (onSelectColumn) {
-      onSelectColumn(columnName);
-      
-      // Scroll to the data table
-      const dataTableElement = document.getElementById('data-table-section');
-      if (dataTableElement) {
-        dataTableElement.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
-  };
-  
+interface DataTypeSummaryProps {
+  dataset: DatasetType;
+}
+
+export const DataTypeSummary = ({ dataset }: DataTypeSummaryProps) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Columns with Most Outliers</CardTitle>
+        <CardTitle>Data Types</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
-          {outlierData.map((item, index) => (
-            <div 
-              key={`outlier-${index}`} 
-              className="flex items-center justify-between p-2 rounded-md bg-amber-50 dark:bg-amber-950/20 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/20 transition-colors"
-              onClick={() => handleColumnClick(item.name)}
-              title="Click to view this column in the data table"
-            >
+        <div className="space-y-2">
+          {Object.entries(dataset.dataTypes)
+            .filter(([_, count]) => count > 0)
+            .map(([type, count]) => (
+            <div key={type} className="flex items-center justify-between">
               <div className="flex items-center">
-                <AlertTriangle className="h-4 w-4 mr-2 text-amber-500" />
-                <span className="font-medium">{item.name}</span>
+                {dataTypeIcons[type as keyof typeof dataTypeIcons]}
+                <span className="ml-2 text-sm font-medium">{type}</span>
               </div>
-              <Badge variant="outline" className="ml-auto">
-                {item.value} ({item.percent}%)
-              </Badge>
+              <Badge variant="secondary">{count}</Badge>
             </div>
           ))}
         </div>

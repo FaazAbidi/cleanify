@@ -29,7 +29,7 @@ export function useOutlierConfig({ dataset }: UseOutlierConfigProps): UseOutlier
 
   // Determine default outlier handling method based on column type
   const getDefaultMethodForColumn = (columnInfo: ColumnInfo): OutlierMethod => {
-    if (columnInfo.type === 'numeric') {
+    if (columnInfo.type === 'QUANTITATIVE') {
       return 'impute_median';
     } else {
       // Outliers typically only apply to numeric columns

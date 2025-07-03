@@ -199,7 +199,7 @@ export function DropColumnsHandler({
                           <div className="text-sm text-muted-foreground">
                             <div className="mb-1">Type: {columnInfo?.type || 'unknown'}</div>
                             <div className="mb-1">Missing: {columnInfo?.missingValues || 0} values</div>
-                            {columnInfo?.type === 'categorical' && (
+                            {columnInfo?.type === 'QUALITATIVE' && (
                               <div>Unique values: {columnInfo.uniqueValues}</div>
                             )}
                           </div>

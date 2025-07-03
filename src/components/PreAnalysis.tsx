@@ -120,7 +120,7 @@ export const PreAnalysis = memo(function PreAnalysis({
         const column = dataset.columns.find(col => col.name === columnName);
         if (column) {
           columnConfigs[columnName] = {
-            type: column.type === 'numeric' ? 'QUANTITATIVE' : 'QUALITATIVE',
+            type: column.type,
             step: null,
             value: null
           };

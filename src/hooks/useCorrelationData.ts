@@ -12,7 +12,7 @@ export function useCorrelationData(dataset: DatasetType) {
   const { matrix, labels } = correlationData;
 
   const numericColumns = useMemo(() => 
-    columns.filter((col) => col.type === "numeric"), 
+    columns.filter((col) => col.type === "QUANTITATIVE"), 
   [columns]);
   
   const [xColumn, setXColumn] = useState<string>(

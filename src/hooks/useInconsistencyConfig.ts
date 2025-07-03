@@ -26,9 +26,9 @@ export function useInconsistencyConfig({ dataset }: UseInconsistencyConfigProps)
 
   // Determine default inconsistency method based on column type
   const getDefaultMethodForColumn = (columnInfo: ColumnInfo): InconsistencyMethod => {
-    if (columnInfo.type === 'numeric') {
+    if (columnInfo.type === 'QUANTITATIVE') {
       return 'impute_mean';
-    } else if (columnInfo.type === 'categorical' || columnInfo.type === 'text' || columnInfo.type === 'boolean') {
+    } else if (columnInfo.type === 'QUALITATIVE') {
       return 'impute_mode';
     } else {
       return 'remove';
@@ -85,7 +85,7 @@ export function useInconsistencyConfig({ dataset }: UseInconsistencyConfigProps)
       if (columnInfo) {
         // Determine if the column is quantitative or qualitative
         const columnType = 
-          columnInfo.type === 'numeric' ? 'QUANTITATIVE' : 'QUALITATIVE';
+          columnInfo.type === 'QUANTITATIVE' ? 'QUANTITATIVE' : 'QUALITATIVE';
 
         columns[config.columnName] = {
           type: columnType,

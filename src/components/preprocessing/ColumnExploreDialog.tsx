@@ -10,9 +10,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { 
   BarChart, Bar, XAxis, YAxis, ResponsiveContainer, 
-  PieChart, Pie, Cell
+  PieChart, Pie, Cell, CartesianGrid, Tooltip
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { Card, CardContent } from "@/components/ui/card";
+import { Target } from "lucide-react";
 
 interface ColumnExploreDialogProps {
   open: boolean;
@@ -32,20 +34,29 @@ export function ColumnExploreDialog({
   const formatDistributionData = (column: ColumnInfo) => {
     if (!column.distribution) return [];
 
-    return Object.entries(column.distribution).map(([key, value]) => ({
-      name: key,
-      value: value,
-    }));
+    if (column.type === 'QUANTITATIVE') {
+      // For quantitative data, use bin ranges as keys
+      return Object.entries(column.distribution).map(([key, value]) => ({
+        bin: key,
+        count: value,
+      }));
+    } else {
+      // For qualitative data, use name/value pairs for pie chart
+      return Object.entries(column.distribution)
+        .sort(([,a], [,b]) => b - a) // Sort by frequency
+        .slice(0, 10) // Show top 10 categories
+        .map(([key, value]) => ({
+          name: key,
+          value: value,
+        }));
+    }
   };
 
   const distributionData = formatDistributionData(column);
 
   const dataTypeColors = {
-    numeric: "#0EA5E9", // Blue
-    categorical: "#10B981", // Green
-    datetime: "#8B5CF6", // Purple
-    text: "#F97316", // Orange
-    boolean: "#EAB308", // Yellow
+    QUANTITATIVE: "#0EA5E9", // Blue
+    QUALITATIVE: "#10B981", // Green
   };
 
   // Generate random colors for pie chart categories
@@ -76,7 +87,7 @@ export function ColumnExploreDialog({
               <span className="font-medium text-foreground">{column.missingValues} ({column.missingPercent.toFixed(1)}%)</span>
             </div>
             
-            {column.type === 'numeric' && (
+            {column.type === 'QUANTITATIVE' && (
               <>
                 <div className="flex flex-col p-3 bg-muted rounded-md">
                   <span className="text-sm text-muted-foreground">Range</span>
@@ -112,7 +123,7 @@ export function ColumnExploreDialog({
               </>
             )}
             
-            {column.type === 'categorical' && column.mode && (
+            {column.type === 'QUALITATIVE' && column.mode && (
               <div className="flex flex-col p-3 bg-muted rounded-md">
                 <span className="text-sm text-muted-foreground">Most Common Value</span>
                 <span className="font-medium text-foreground">{column.mode}</span>
@@ -124,73 +135,79 @@ export function ColumnExploreDialog({
             <div>
               <div className="text-sm font-medium mb-2">Value Distribution</div>
               <div className="h-72">
-                <ChartContainer
-                  config={{
-                    value: {
-                      label: "Count",
-                      color: dataTypeColors[column.type],
-                    },
-                  }}
-                  className="h-full w-full"
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    {column.type === 'numeric' ? (
-                      <BarChart data={distributionData}>
-                        <XAxis 
-                          dataKey="name" 
-                          tick={{ fontSize: 12 }}
-                          tickFormatter={(val) => Number(val).toFixed(1)}
-                        />
-                        <YAxis />
-                        <ChartTooltip 
-                          content={
-                            <ChartTooltipContent 
-                              formatter={(value) => [value, "Count"]}
-                              labelFormatter={(label) => `Value: ${Number(label).toFixed(2)}`}
-                            />
-                          }
-                        />
-                        <Bar 
-                          dataKey="value" 
-                          fill={dataTypeColors[column.type]}
-                        />
-                      </BarChart>
-                    ) : (
-                      <PieChart>
-                        <Pie
-                          data={distributionData.slice(0, 10)} // Limit to top 10 categories
-                          dataKey="value"
-                          nameKey="name"
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={100}
-                          labelLine={false}
-                          label={({ name, percent }) => 
-                            `${name.length > 15 ? name.substring(0, 15) + '...' : name} ${(percent * 100).toFixed(0)}%`
-                          }
-                        >
-                          {distributionData.slice(0, 10).map((_, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <ChartTooltip 
-                          content={
-                            <ChartTooltipContent 
-                              formatter={(value) => [value, "Count"]}
-                            />
-                          }
-                        />
-                      </PieChart>
-                    )}
+                {column.type === 'QUANTITATIVE' ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={distributionData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="bin" 
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                      />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#3B82F6" />
+                    </BarChart>
                   </ResponsiveContainer>
-                </ChartContainer>
+                ) : (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={distributionData}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        fill="#8884d8"
+                        dataKey="value"
+                        label={({ name, value, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                      >
+                        {distributionData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value, name) => [value, name]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
               </div>
-              {column.type === 'categorical' && distributionData.length > 10 && (
+              {column.type === 'QUALITATIVE' && Object.keys(column.distribution || {}).length > 10 && (
                 <div className="text-xs text-muted-foreground text-center mt-2">
-                  Showing top 10 of {distributionData.length} categories
+                  Showing top 10 of {Object.keys(column.distribution || {}).length} categories
                 </div>
               )}
             </div>
+          )}
+
+          {column.type === 'QUANTITATIVE' && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-4">
+                <Card className="flex-1 min-w-[200px]">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center space-x-2">
+                      <BarChart className="h-5 w-5 text-blue-600" />
+                      <span className="text-sm font-medium">Mean</span>
+                    </div>
+                    <p className="text-2xl font-bold mt-2">
+                      {column.mean?.toFixed(2) || 'N/A'}
+                    </p>
+                  </CardContent>
+                </Card>
+                {/* ... more cards ... */}
+              </div>
+            </div>
+          )}
+          
+          {column.type === 'QUALITATIVE' && column.mode && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center space-x-2">
+                  <Target className="h-5 w-5 text-green-600" />
+                  <span className="text-sm font-medium">Most Common Value</span>
+                </div>
+                <p className="text-2xl font-bold mt-2">{column.mode}</p>
+              </CardContent>
+            </Card>
           )}
         </div>
         

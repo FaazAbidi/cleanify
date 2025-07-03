@@ -1,10 +1,11 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { DatasetType } from "@/types/dataset";
+import { DatasetType, ColumnMapping } from "@/types/dataset";
 import { Tables } from "@/integrations/supabase/types";
-import { calculateColumnStats, inferDataType, detectCSVSeparator } from "@/lib/data-utils";
+import { calculateColumnStats, inferSimplifiedDataType, detectCSVSeparator, createColumnsFromDataTypes, inferDataTypesForOriginalData, createDataTypesFromColumns, processCSVHeaders, generateUniqueColumnIdentifiers } from "@/lib/data-utils";
 import { useToast } from "@/components/ui/use-toast";
 import { TaskVersion } from "@/types/version";
+import { ColumnInfo } from "@/types/dataset";
 
 // Maximum number of retries for API calls
 const MAX_RETRIES = 3;
@@ -19,167 +20,17 @@ export function useTaskData() {
   const [selectedTask, setSelectedTask] = useState<Tables<'Tasks'> | null>(null);
   const { toast } = useToast();
 
-  // Helper function to calculate Pearson correlation
-  const calculatePearsonCorrelation = (x: number[], y: number[]): number => {
-    // Must have same length
-    if (x.length !== y.length || x.length === 0) {
-      return 0;
-    }
-    
-    // Calculate means
-    const meanX = x.reduce((sum, val) => sum + val, 0) / x.length;
-    const meanY = y.reduce((sum, val) => sum + val, 0) / y.length;
-    
-    // Calculate covariance and standard deviations
-    let covariance = 0;
-    let varX = 0;
-    let varY = 0;
-    
-    for (let i = 0; i < x.length; i++) {
-      const xDiff = x[i] - meanX;
-      const yDiff = y[i] - meanY;
-      covariance += xDiff * yDiff;
-      varX += xDiff * xDiff;
-      varY += yDiff * yDiff;
-    }
-    
-    // Prevent division by zero
-    if (varX === 0 || varY === 0) {
-      return 0;
-    }
-    
-    // Return Pearson correlation coefficient
-    return covariance / (Math.sqrt(varX) * Math.sqrt(varY));
-  };
-
-  // Calculate correlation matrix for numeric columns
-  const calculateCorrelation = async (
-    data: any[][], 
-    columnNames: string[], 
-    columnTypes: Record<string, string>
-  ): Promise<{ matrix: number[][], labels: string[] }> => {
-    // Only include numeric columns
-    const numericColumnIndices = columnNames
-      .map((name, idx) => ({ name, idx }))
-      .filter(col => columnTypes[col.name] === 'numeric');
-    
-    const labels = numericColumnIndices.map(col => col.name);
-    const indices = numericColumnIndices.map(col => col.idx);
-    
-    // If we have too many numeric columns, sample them to prevent browser crashes
-    const maxColumns = 20; // Reduced from 30 to prevent resource issues
-    let sampledIndices = indices;
-    let sampledLabels = labels;
-    
-    if (indices.length > maxColumns) {
-      // Take a sample of columns if there are too many
-      sampledIndices = [];
-      sampledLabels = [];
+  // Helper function to retry API calls
+  const retryFetch = async (fetchFn: () => Promise<any>, retries = MAX_RETRIES): Promise<any> => {
+    try {
+      return await fetchFn();
+    } catch (error) {
+      if (retries <= 0) throw error;
       
-      // Always include first few columns for consistency
-      const firstColumns = 5;
-      for (let i = 0; i < Math.min(firstColumns, indices.length); i++) {
-        sampledIndices.push(indices[i]);
-        sampledLabels.push(labels[i]);
-      }
-      
-      // Then sample the rest
-      const step = Math.ceil((indices.length - firstColumns) / (maxColumns - firstColumns));
-      for (let i = firstColumns; i < indices.length; i += step) {
-        if (sampledIndices.length < maxColumns) {
-          sampledIndices.push(indices[i]);
-          sampledLabels.push(labels[i]);
-        }
-      }
+      console.log(`Retrying API call, ${retries} attempts left...`);
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+      return retryFetch(fetchFn, retries - 1);
     }
-    
-    // Create empty correlation matrix
-    const matrix: number[][] = Array(sampledIndices.length).fill(0)
-      .map(() => Array(sampledIndices.length).fill(0));
-    
-    // Fill matrix diagonal with 1's (self-correlation)
-    for (let i = 0; i < sampledIndices.length; i++) {
-      matrix[i][i] = 1;
-    }
-    
-    // Process correlations in batches to prevent UI from freezing
-    const totalPairs = (sampledIndices.length * (sampledIndices.length - 1)) / 2;
-    let processedPairs = 0;
-    const batchSize = 50; // Reduced from 100 to prevent resource issues
-    
-    return new Promise((resolve) => {
-      const processBatch = () => {
-        const startTime = Date.now();
-        let pairsInBatch = 0;
-        
-        // For each pair of columns
-        outerLoop: for (let i = 0; i < sampledIndices.length; i++) {
-          for (let j = i + 1; j < sampledIndices.length; j++) {
-            // Skip if already calculated
-            if (matrix[i][j] !== 0) continue;
-            
-            const colIndex1 = sampledIndices[i];
-            const colIndex2 = sampledIndices[j];
-            
-            // Extract data for both columns, filter out non-numeric values
-            const colData1: number[] = [];
-            const colData2: number[] = [];
-            
-            for (let k = 0; k < data.length; k++) {
-              const val1 = parseFloat(data[k][colIndex1]);
-              const val2 = parseFloat(data[k][colIndex2]);
-              
-              if (!isNaN(val1) && !isNaN(val2)) {
-                colData1.push(val1);
-                colData2.push(val2);
-              }
-            }
-            
-            // Calculate correlation if we have enough data points
-            if (colData1.length > 1) {
-              const correlation = calculatePearsonCorrelation(colData1, colData2);
-              
-              // Store correlation in matrix (symmetric)
-              matrix[i][j] = correlation;
-              matrix[j][i] = correlation;
-            } else {
-              // Not enough data for correlation
-              matrix[i][j] = 0;
-              matrix[j][i] = 0;
-            }
-            
-            pairsInBatch++;
-            processedPairs++;
-            
-            // Check if batch limit reached or taking too long (50ms)
-            if (pairsInBatch >= batchSize || Date.now() - startTime > 50) {
-              break outerLoop;
-            }
-          }
-        }
-        
-        // Update progress
-        const correlationProgress = Math.min(95, 70 + Math.floor((processedPairs / totalPairs) * 25));
-        setProcessingProgress(correlationProgress);
-        
-        // Check if all pairs processed
-        const allProcessed = processedPairs >= totalPairs;
-        
-        if (allProcessed) {
-          resolve({ matrix, labels: sampledLabels });
-        } else {
-          // Schedule next batch with a small delay to allow UI updates
-          setTimeout(processBatch, 0);
-        }
-      };
-      
-      // Start processing
-      if (sampledIndices.length > 0) {
-        processBatch();
-      } else {
-        resolve({ matrix: [], labels: [] });
-      }
-    });
   };
 
   const countDuplicateRows = (data: any[][]): number => {
@@ -195,16 +46,216 @@ export function useTaskData() {
     return trimmedColumnNames.length - uniqueColumnNames.size;
   };
 
-  // Helper function to retry API calls
-  const retryFetch = async (fetchFn: () => Promise<any>, retries = MAX_RETRIES): Promise<any> => {
+  const calculateCorrelation = async (data: any[][], headers: string[], columnTypes: string[]) => {
     try {
-      return await fetchFn();
-    } catch (error) {
-      if (retries <= 0) throw error;
+      // Filter for numeric columns only
+      const numericIndices = columnTypes
+        .map((type, index) => type === 'QUANTITATIVE' ? index : -1)
+        .filter(index => index !== -1);
+
+      if (numericIndices.length < 2) {
+        return null; // Need at least 2 numeric columns for correlation
+      }
+
+      // Extract numeric data
+      const numericData = data.map(row => 
+        numericIndices.map(index => {
+          const value = parseFloat(row[index]);
+          return isNaN(value) ? 0 : value;
+        })
+      );
+
+      const numericHeaders = numericIndices.map(index => headers[index]);
       
-      console.log(`Retrying API call, ${retries} attempts left...`);
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-      return retryFetch(fetchFn, retries - 1);
+      // Calculate correlation matrix
+      const correlationMatrix = calculateCorrelationMatrix(numericData);
+      
+      return {
+        matrix: correlationMatrix,
+        labels: numericHeaders
+      };
+    } catch (error) {
+      console.error('Error calculating correlation:', error);
+      return null;
+    }
+  };
+
+  const calculateCorrelationMatrix = (data: number[][]): number[][] => {
+    const numCols = data[0].length;
+    const matrix: number[][] = [];
+
+    for (let i = 0; i < numCols; i++) {
+      matrix[i] = [];
+      for (let j = 0; j < numCols; j++) {
+        if (i === j) {
+          matrix[i][j] = 1;
+        } else {
+          const col1 = data.map(row => row[i]);
+          const col2 = data.map(row => row[j]);
+          matrix[i][j] = pearsonCorrelation(col1, col2);
+        }
+      }
+    }
+
+    return matrix;
+  };
+
+  const pearsonCorrelation = (x: number[], y: number[]): number => {
+    const n = x.length;
+    if (n === 0) return 0;
+
+    const sumX = x.reduce((a, b) => a + b, 0);
+    const sumY = y.reduce((a, b) => a + b, 0);
+    const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
+    const sumX2 = x.reduce((sum, xi) => sum + xi * xi, 0);
+    const sumY2 = y.reduce((sum, yi) => sum + yi * yi, 0);
+
+    const numerator = n * sumXY - sumX * sumY;
+    const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+
+    return denominator === 0 ? 0 : numerator / denominator;
+  };
+
+  const processCSVData = async (csvContent: string, filename: string): Promise<DatasetType> => {
+    try {
+      // Detect separator
+      const separator = detectCSVSeparator(csvContent);
+      
+      // Process headers and handle duplicates
+      const headerInfo = processCSVHeaders(csvContent, separator);
+      const { originalHeaders, uniqueHeaders, columnMapping } = headerInfo;
+      
+      // Parse CSV manually
+      const lines = csvContent.trim().split('\n');
+      
+      // Parse data rows
+      const rowData: any[][] = [];
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(separator).map(v => {
+          // Remove quotes and trim
+          let cleaned = v.trim().replace(/^["']|["']$/g, '');
+          
+          // Handle empty values
+          if (cleaned === '' || cleaned.toLowerCase() === 'na' || cleaned.toLowerCase() === 'null') {
+            return null;
+          }
+          
+          // Try to parse as number
+          const num = parseFloat(cleaned);
+          if (!isNaN(num) && isFinite(num)) {
+            return num;
+          }
+          
+          // Return as string
+          return cleaned;
+        });
+        
+        // Only add rows that have the correct number of columns
+        if (values.length === originalHeaders.length) {
+          rowData.push(values);
+        }
+      }
+
+      if (rowData.length === 0) {
+        throw new Error('No valid data rows found in CSV');
+      }
+
+      // Log duplicate header information
+      if (Object.keys(columnMapping.duplicateInfo).length > 0) {
+        console.log('Duplicate headers detected:', columnMapping.duplicateInfo);
+        console.log('Generated unique column IDs:', uniqueHeaders);
+      }
+
+      // Calculate column statistics using unique identifiers
+      const columns: ColumnInfo[] = [];
+      for (let i = 0; i < uniqueHeaders.length; i++) {
+        const uniqueId = uniqueHeaders[i];
+        const originalName = originalHeaders[i];
+        const columnData = rowData.map(row => row[i]);
+        const type = inferSimplifiedDataType(columnData);
+        
+        const detailedType = inferSimplifiedDataType(columnData);
+        const stats = calculateColumnStats(columnData, detailedType);
+        
+        const columnInfo: ColumnInfo = {
+          name: uniqueId, // Use unique ID as primary identifier
+          originalName: originalName, // Store original name for display
+          type,
+          uniqueValues: stats.uniqueValues || 0,
+          missingValues: stats.missingValues || 0,
+          missingPercent: stats.missingPercent || 0,
+          ...stats,
+        };
+        
+        columns.push(columnInfo);
+      }
+
+      // Count data types (using the simplified types from ColumnInfo)
+      const dataTypes: Record<string, number> = {
+        QUANTITATIVE: 0,
+        QUALITATIVE: 0,
+      };
+      
+      columns.forEach(col => {
+        dataTypes[col.type]++;
+      });
+
+      // Count missing values, duplicates
+      const missingValuesCount = columns.reduce((sum, col) => sum + col.missingValues, 0);
+      
+      // Calculate duplicate rows
+      const rowStrings = rowData.map(row => JSON.stringify(row));
+      const uniqueRows = new Set(rowStrings);
+      const duplicateRowsCount = rowData.length - uniqueRows.size;
+
+      // Calculate duplicate columns (by comparing column data)
+      let duplicateColumnsCount = 0;
+      for (let i = 0; i < uniqueHeaders.length; i++) {
+        for (let j = i + 1; j < uniqueHeaders.length; j++) {
+          const col1Data = rowData.map(row => row[i]);
+          const col2Data = rowData.map(row => row[j]);
+          if (JSON.stringify(col1Data) === JSON.stringify(col2Data)) {
+            duplicateColumnsCount++;
+            break; // Count each duplicate column only once
+          }
+        }
+      }
+
+      const dataset: DatasetType = {
+        filename,
+        columns,
+        rows: rowData.length,
+        rawData: rowData,
+        columnNames: uniqueHeaders, // Use unique identifiers
+        originalColumnNames: originalHeaders, // Store original names
+        columnMapping, // Store mapping information
+        missingValuesCount,
+        duplicateRowsCount,
+        duplicateColumnsCount,
+        dataTypes,
+      };
+
+      // Calculate correlation data for numeric columns (using unique identifiers for calculation)
+      const columnTypes = uniqueHeaders.map((_, index) => {
+        const columnData = rowData.map(row => row[index]);
+        return inferSimplifiedDataType(columnData);
+      });
+      
+      const correlationData = await calculateCorrelation(rowData, uniqueHeaders, columnTypes);
+      if (correlationData) {
+        // Update correlation labels to use original names for display
+        if (correlationData.labels && correlationData.labels.length > 0) {
+          correlationData.labels = correlationData.labels.map(uniqueId => 
+            columnMapping.idToOriginalMap[uniqueId] || uniqueId
+          );
+        }
+        dataset.correlationData = correlationData;
+      }
+
+      return dataset;
+    } catch (error) {
+      console.error('Error processing CSV data:', error);
+      throw error;
     }
   };
 
@@ -253,11 +304,12 @@ export function useTaskData() {
       // Parse the CSV data
       const text = await fileData.text();
       
-      // Detect the CSV separator (comma or semicolon)
+      // Detect the CSV separator and process headers
       const separator = detectCSVSeparator(text);
+      const headerInfo = processCSVHeaders(text, separator);
+      const { originalHeaders, uniqueHeaders, columnMapping } = headerInfo;
       
       const lines = text.trim().split('\n');
-      const headers = lines[0].split(separator).map(header => header.trim());
       
       // Sample the data if it's very large to prevent browser crashes
       const MAX_ROWS = 5000;
@@ -281,46 +333,90 @@ export function useTaskData() {
       
       setProcessingProgress(20);
 
-      // Process column types and statistics in batches
-      const columnTypes: Record<string, string> = {};
-      const columns: any[] = [];
-      const batchSize = 5; // Process 5 columns at a time
+      // Get stored data types from TaskMethods table
+      const storedDataTypes = taskMethod.data_types as Record<string, 'QUANTITATIVE' | 'QUALITATIVE'> | null;
+      
+      let columns: ColumnInfo[] = [];
+      let dataTypesToUse: Record<string, 'QUANTITATIVE' | 'QUALITATIVE'> = {};
 
-      for (let i = 0; i < headers.length; i += batchSize) {
-        await new Promise(resolve => {
-          setTimeout(() => {
-            const batchEnd = Math.min(i + batchSize, headers.length);
-            
-            for (let colIndex = i; colIndex < batchEnd; colIndex++) {
-              const name = headers[colIndex];
-              const columnData = rowData.map(row => row[colIndex]);
-              const type = inferDataType(columnData);
-              columnTypes[name] = type;
+      if (storedDataTypes) {
+        // Use stored data types as source of truth
+        console.log('Using stored data types from database:', storedDataTypes);
+        dataTypesToUse = storedDataTypes;
+        // Use unique headers and column mapping for stored data types
+        columns = createColumnsFromDataTypes(rowData, uniqueHeaders, storedDataTypes, columnMapping);
+      } else {
+        // Fallback: infer data types and store them if this is an original version
+        console.log('No stored data types found, inferring data types');
+        
+        // Process column types and statistics in batches
+        const batchSize = 5;
+        for (let i = 0; i < uniqueHeaders.length; i += batchSize) {
+          await new Promise(resolve => {
+            setTimeout(() => {
+              const batchEnd = Math.min(i + batchSize, uniqueHeaders.length);
               
-              columns.push({
-                name,
-                type,
-                ...calculateColumnStats(columnData, type),
-              });
-            }
+              for (let colIndex = i; colIndex < batchEnd; colIndex++) {
+                const uniqueId = uniqueHeaders[colIndex];
+                const originalName = originalHeaders[colIndex];
+                const columnData = rowData.map(row => row[colIndex]);
+                const type = inferSimplifiedDataType(columnData);
+                dataTypesToUse[uniqueId] = type;
+                
+                const stats = calculateColumnStats(columnData, type);
+                
+                const columnInfo = {
+                  name: uniqueId,
+                  originalName: originalName,
+                  type,
+                  uniqueValues: stats.uniqueValues || 0,
+                  missingValues: stats.missingValues || 0,
+                  missingPercent: stats.missingPercent || 0,
+                  ...stats,
+                } as ColumnInfo;
+                
+                columns.push(columnInfo);
+              }
+              
+              // Update progress (40% of total for column processing)
+              const colProgress = 20 + Math.floor(((i + batchSize) / uniqueHeaders.length) * 40);
+              setProcessingProgress(Math.min(colProgress, 60));
+              resolve(null);
+            }, 0);
+          });
+        }
+
+        // If this is an original data version (no prev_version), store the inferred data types
+        // Store using unique IDs as keys
+        if (taskMethod.prev_version === null) {
+          try {
+            const dataTypesToStore = columns.reduce((acc, col) => {
+              acc[col.name] = col.type; // Use unique ID as key
+              return acc;
+            }, {} as Record<string, 'QUANTITATIVE' | 'QUALITATIVE'>);
             
-            // Update progress (40% of total for column processing)
-            const colProgress = 20 + Math.floor(((i + batchSize) / headers.length) * 40);
-            setProcessingProgress(Math.min(colProgress, 60));
-            resolve(null);
-          }, 0);
-        });
+            const { error: updateError } = await supabase
+              .from('TaskMethods')
+              .update({ data_types: dataTypesToStore })
+              .eq('id', taskMethod.id);
+            
+            if (updateError) {
+              console.error('Error storing inferred data types:', updateError);
+            } else {
+              console.log('Successfully stored inferred data types for original version');
+            }
+          } catch (error) {
+            console.error('Error updating TaskMethods with data types:', error);
+          }
+        }
       }
 
       setProcessingProgress(60);
 
-      // Count data types
+      // Count data types using the determined types
       const dataTypes: Record<string, number> = {
-        numeric: 0,
-        categorical: 0,
-        datetime: 0,
-        text: 0,
-        boolean: 0,
+        QUANTITATIVE: 0,
+        QUALITATIVE: 0,
       };
       
       columns.forEach(col => {
@@ -340,7 +436,7 @@ export function useTaskData() {
       });
 
       // Calculate duplicate columns
-      const duplicateColumnsCount = countDuplicateColumns(headers);
+      const duplicateColumnsCount = countDuplicateColumns(originalHeaders);
       
       setProcessingProgress(70);
       
@@ -350,7 +446,9 @@ export function useTaskData() {
         columns: columns,
         rows: rowData.length,
         rawData: rowData,
-        columnNames: headers,
+        columnNames: uniqueHeaders,
+        originalColumnNames: originalHeaders,
+        columnMapping: columnMapping,
         missingValuesCount,
         duplicateRowsCount,
         duplicateColumnsCount,
@@ -359,7 +457,8 @@ export function useTaskData() {
       };
       
       // Calculate correlations (potentially expensive)
-      const correlationData = await calculateCorrelation(rowData, headers, columnTypes);
+      const columnTypesArray = uniqueHeaders.map(uniqueId => dataTypesToUse[uniqueId]);
+      const correlationData = await calculateCorrelation(rowData, uniqueHeaders, columnTypesArray);
       dataset.correlationData = correlationData;
       
       setProcessingProgress(100);

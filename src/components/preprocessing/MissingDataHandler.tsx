@@ -91,7 +91,7 @@ export function MissingDataHandler({
     // filter columns that are supported by the method
     const supportedColumns = columnsWithMissing.filter(column => {
       const columnInfo = dataset?.columns.find(col => col.name === column);
-      return columnInfo?.type === 'numeric' || columnInfo?.type === 'categorical';
+      return columnInfo?.type === 'QUANTITATIVE' || columnInfo?.type === 'QUALITATIVE';
     });
     
     return supportedColumns;
@@ -110,6 +110,11 @@ export function MissingDataHandler({
       setSupportedColumns(dataset.columns.filter(col => columnsWithMissingValues.includes(col.name)));
     }
   }, [hasColumnsWithMissingValues, columnsWithMissingValues, setSelectedColumns, initialSelectionDone, isLoaded]);
+
+  // Helper function to check if column supports imputation
+  const supportsImputation = (columnInfo: ColumnInfo | undefined): boolean => {
+    return columnInfo?.type === 'QUANTITATIVE' || columnInfo?.type === 'QUALITATIVE';
+  };
 
   if (!isLoaded) {
     return (

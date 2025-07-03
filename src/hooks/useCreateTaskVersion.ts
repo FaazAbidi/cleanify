@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
+import { getParentDataTypes } from '@/lib/data-utils';
 
 // Input type for creating a new task version
 interface CreateTaskVersionInput {
@@ -9,6 +10,7 @@ interface CreateTaskVersionInput {
   name: string;
   parentVersionId: number | null;
   config?: any;
+  dataTypes?: Record<string, 'QUANTITATIVE' | 'QUALITATIVE'>; // Optional data types for original data
 }
 
 // Hook to create a new task version (TaskMethods entry)
@@ -21,7 +23,21 @@ export function useCreateTaskVersion() {
       setLoading(true);
       setError(null);
 
-      const { taskId, methodId, name, parentVersionId, config } = input;
+      const { taskId, methodId, name, parentVersionId, config, dataTypes } = input;
+
+      // Determine data types to store
+      let dataTypesToStore: Record<string, 'QUANTITATIVE' | 'QUALITATIVE'> | null = null;
+
+      if (parentVersionId === null) {
+        // Original data version - use provided data types (should be inferred)
+        dataTypesToStore = dataTypes || null;
+      } else {
+        // Child version - inherit from parent
+        dataTypesToStore = await getParentDataTypes(parentVersionId);
+        if (!dataTypesToStore) {
+          console.warn(`Could not fetch parent data types for version ${parentVersionId}, proceeding without data_types`);
+        }
+      }
 
       // Create a new entry in the TaskMethods table
       const { data, error } = await supabase
@@ -32,7 +48,8 @@ export function useCreateTaskVersion() {
           name,
           prev_version: parentVersionId,
           status: 'RAW',
-          config: config
+          config: config,
+          data_types: dataTypesToStore
         })
         .select()
         .single();

@@ -1,6 +1,15 @@
+export interface ColumnMapping {
+  uniqueIds: string[];
+  originalNames: string[];
+  duplicateInfo: Record<string, number>;
+  idToOriginalMap: Record<string, string>;
+  originalToIdsMap: Record<string, string[]>;
+}
+
 export interface ColumnInfo {
   name: string;
-  type: 'numeric' | 'categorical' | 'datetime' | 'text' | 'boolean';
+  originalName?: string;
+  type: 'QUANTITATIVE' | 'QUALITATIVE';
   uniqueValues: number;
   missingValues: number;
   missingPercent: number;
@@ -38,6 +47,8 @@ export interface DatasetType {
   rows: number;
   rawData: any[][];
   columnNames: string[];
+  originalColumnNames?: string[];
+  columnMapping?: ColumnMapping;
   correlationData?: CorrelationData;
   missingValuesCount: number;
   duplicateRowsCount: number;

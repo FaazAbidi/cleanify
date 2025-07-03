@@ -134,7 +134,7 @@ export function VersionDiffVisualizations({
         let distributionSimilarity = 1;
         let significantValueChanges = [];
 
-        if (baseCol.type === 'categorical' && compareCol.type === 'categorical' && 
+        if (baseCol.type === 'QUALITATIVE' && compareCol.type === 'QUALITATIVE' && 
             baseCol.distribution && compareCol.distribution) {
           
           // Get all unique categories
@@ -178,7 +178,7 @@ export function VersionDiffVisualizations({
         
         // Calculate numeric statistic changes
         let numericChanges = null;
-        if (baseCol.type === 'numeric' && compareCol.type === 'numeric') {
+        if (baseCol.type === 'QUANTITATIVE' && compareCol.type === 'QUANTITATIVE') {
           numericChanges = {
             mean: compareCol.mean !== undefined && baseCol.mean !== undefined ? 
               compareCol.mean - baseCol.mean : null,
@@ -200,9 +200,9 @@ export function VersionDiffVisualizations({
           type: baseCol.type,
           missingValuesChange,
           outliersChange,
-          distributionSimilarity: baseCol.type === 'categorical' ? distributionSimilarity : null,
-          significantValueChanges: baseCol.type === 'categorical' ? significantValueChanges : null,
-          numericChanges: baseCol.type === 'numeric' ? numericChanges : null
+          distributionSimilarity: baseCol.type === 'QUALITATIVE' ? distributionSimilarity : null,
+          significantValueChanges: baseCol.type === 'QUALITATIVE' ? significantValueChanges : null,
+          numericChanges: baseCol.type === 'QUANTITATIVE' ? numericChanges : null
         };
       }).filter(Boolean);
 
@@ -422,7 +422,7 @@ export function VersionDiffVisualizations({
             <CardContent>
               <ScrollArea className="h-[450px] pr-4">
                 {diffStats.columnComparisons
-                  .filter(col => col.type === 'categorical' && col.significantValueChanges?.length > 0)
+                  .filter(col => col.type === 'QUALITATIVE' && col.significantValueChanges?.length > 0)
                   .map(col => (
                     <CategoryDistributionCard
                       key={col.name}
@@ -433,7 +433,7 @@ export function VersionDiffVisualizations({
                   ))}
                 
                 {diffStats.columnComparisons
-                  .filter(col => col.type === 'numeric' && col.numericChanges)
+                  .filter(col => col.type === 'QUANTITATIVE' && col.numericChanges)
                   .map(col => (
                     <NumericDistributionCard
                       key={col.name}
@@ -443,8 +443,8 @@ export function VersionDiffVisualizations({
                   ))}
                 
                 {diffStats.columnComparisons.filter(
-                  col => (col.type === 'categorical' && col.significantValueChanges?.length > 0) || 
-                        (col.type === 'numeric' && col.numericChanges)
+                  col => (col.type === 'QUALITATIVE' && col.significantValueChanges?.length > 0) || 
+                        (col.type === 'QUANTITATIVE' && col.numericChanges)
                 ).length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     No significant distribution changes found

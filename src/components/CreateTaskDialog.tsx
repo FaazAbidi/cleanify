@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Upload } from "lucide-react";
+import { detectCSVSeparator, inferDataTypesForOriginalData } from "@/lib/data-utils";
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -77,7 +78,41 @@ export const CreateTaskDialog = ({ open, onOpenChange, onTaskCreated }: CreateTa
     setUploading(true);
     
     try {
-      // 1. Upload the raw data file to Supabase Storage
+      // 1. Read and parse CSV file to infer data types
+      const fileContent = await file.text();
+      const separator = detectCSVSeparator(fileContent);
+      const lines = fileContent.trim().split('\n');
+      const headers = lines[0].split(separator).map(h => h.trim().replace(/^["']|["']$/g, ''));
+      
+      // Parse a sample of data rows for type inference
+      const sampleSize = Math.min(1000, lines.length - 1); // Use first 1000 rows for inference
+      const sampleData: any[][] = [];
+      
+      for (let i = 1; i <= sampleSize; i++) {
+        if (i < lines.length) {
+          const values = lines[i].split(separator).map(v => {
+            let cleaned = v.trim().replace(/^["']|["']$/g, '');
+            if (cleaned === '' || cleaned.toLowerCase() === 'na' || cleaned.toLowerCase() === 'null') {
+              return null;
+            }
+            const num = parseFloat(cleaned);
+            if (!isNaN(num) && isFinite(num)) {
+              return num;
+            }
+            return cleaned;
+          });
+          
+          if (values.length === headers.length) {
+            sampleData.push(values);
+          }
+        }
+      }
+      
+      // Infer data types from the sample data
+      const inferredDataTypes = inferDataTypesForOriginalData(sampleData, headers);
+      console.log('Inferred data types for original data:', inferredDataTypes);
+
+      // 2. Upload the raw data file to Supabase Storage
       const filePath = `${user.id}/${Date.now()}/${file.name}`;
       const { error: uploadError } = await supabase.storage
         .from('raw-data')
@@ -88,7 +123,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, onTaskCreated }: CreateTa
       
       if (uploadError) throw uploadError;
       
-      // 2. Create a file record in the Files table
+      // 3. Create a file record in the Files table
       const { data: fileData, error: fileError } = await supabase
         .from('Files')
         .insert([{
@@ -107,7 +142,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, onTaskCreated }: CreateTa
         throw new Error("Failed to create file record");
       }
       
-      // 3. Create the task in the database with the file reference
+      // 4. Create the task in the database with the file reference
       const { data: taskData, error: taskError } = await supabase
         .from('Tasks')
         .insert([
@@ -127,7 +162,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, onTaskCreated }: CreateTa
         throw new Error("Failed to create task");
       }
 
-      // 4. Get Original Data Method ID
+      // 5. Get Original Data Method ID
       const { data: methodData, error: methodError } = await supabase
         .from('Methods')
         .select('id')
@@ -136,7 +171,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, onTaskCreated }: CreateTa
 
       if (methodError || !methodData.id) throw methodError;
 
-      // 5. Create an entry in the TaskMethods table
+      // 6. Create an entry in the TaskMethods table with inferred data types
       const { data: taskMethodData, error: taskMethodError } = await supabase
         .from('TaskMethods')
         .insert([
@@ -146,7 +181,8 @@ export const CreateTaskDialog = ({ open, onOpenChange, onTaskCreated }: CreateTa
             task_id: taskData.id,
             method_id: methodData.id,
             created_at: new Date().toISOString(),
-            processed_file: fileData.id
+            processed_file: fileData.id,
+            data_types: inferredDataTypes // Store the inferred data types
           }
         ])
         .select('id')
@@ -154,7 +190,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, onTaskCreated }: CreateTa
       
       if (!taskMethodData || !taskMethodData.id) throw taskMethodError;
       
-      // 6. Update the task status to completed
+      // 7. Update the task status to completed
       const { error: updateError } = await supabase
         .from('Tasks')
         .update({ status: 'PROCESSED' })
@@ -165,7 +201,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, onTaskCreated }: CreateTa
       // Success
       toast({
         title: "Success",
-        description: "Task created successfully.",
+        description: "Task created successfully with inferred data types.",
       });
       
       onOpenChange(false);

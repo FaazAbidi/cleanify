@@ -64,7 +64,7 @@ export function BinningHandler({
     
     // Filter for columns that are numeric
     return dataset.columns
-      .filter(column => column.type === 'numeric')
+      .filter(column => column.type === 'QUANTITATIVE')
       .map(column => column.name);
   }, [dataset]);
 

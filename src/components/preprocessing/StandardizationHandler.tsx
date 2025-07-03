@@ -62,7 +62,7 @@ export function StandardizationHandler({
     
     // Filter for columns that are numeric
     const supportedColumns = dataset.columns
-      .filter(column => column.type === 'numeric')
+      .filter(column => column.type === 'QUANTITATIVE')
       .map(column => column.name);
     
     return supportedColumns;

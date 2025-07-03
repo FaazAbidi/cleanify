@@ -20,6 +20,7 @@ export interface TaskVersion {
   processed_file: number | null;
   status: "RUNNING" | "RAW" | "PROCESSED" | "FAILED";
   task_id: number | null;
+  data_types: Record<string, 'QUANTITATIVE' | 'QUALITATIVE'> | null;
   
   // Extended fields for UI
   file?: Tables<'Files'> | null;

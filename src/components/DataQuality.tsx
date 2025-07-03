@@ -2,8 +2,11 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { DatasetType } from "@/types/dataset";
-import { AlertCircle, Search } from "lucide-react";
+import { AlertCircle, Search, Filter, TrendingUp, AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface DataQualityProps {
   dataset: DatasetType;
@@ -12,7 +15,15 @@ interface DataQualityProps {
 export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [skewnessPage, setSkewnessPage] = useState(1);
+  const [skewnessSearch, setSkewnessSearch] = useState("");
+  const [consistencyPage, setConsistencyPage] = useState(1);
+  const [consistencySearch, setConsistencySearch] = useState("");
+  const [skewnessFilter, setSkewnessFilter] = useState<string>("all"); // all, significant, moderate
+  const [consistencyFilter, setConsistencyFilter] = useState<string>("all"); // all, high, moderate, low
+  
   const columnsPerPage = 8;
+  const itemsPerPage = 12; // For skewness and consistency sections
   
   const completenessScore = calculateCompletenessScore(dataset);
   const uniquenessScore = calculateUniquenessScore(dataset);
@@ -20,9 +31,56 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
   const accuracyScore = calculateAccuracyScore(dataset);
   const overallScore = Math.round((completenessScore + uniquenessScore + consistencyScore + accuracyScore) / 4);
 
+  // Calculate summary statistics for large datasets
+  const skewedColumns = dataset.columns.filter(col => 
+    col.type === 'QUANTITATIVE' && col.skewness !== undefined && col.isSkewed
+  );
+  const highlySkewedColumns = skewedColumns.filter(col => 
+    Math.abs(col.skewness || 0) > 2
+  );
+  const inconsistentColumns = dataset.columns.filter(col => col.hasMixedTypes);
+  const highlyInconsistentColumns = inconsistentColumns.filter(col => 
+    (col.inconsistencyRatio || 0) > 0.2
+  );
+
+  // Filter and paginate skewed columns
+  const getFilteredSkewedColumns = () => {
+    let filtered = skewedColumns.filter(col =>
+      col.name.toLowerCase().includes(skewnessSearch.toLowerCase())
+    );
+
+    if (skewnessFilter === "significant") {
+      filtered = filtered.filter(col => Math.abs(col.skewness || 0) > 2);
+    } else if (skewnessFilter === "moderate") {
+      filtered = filtered.filter(col => Math.abs(col.skewness || 0) > 1 && Math.abs(col.skewness || 0) <= 2);
+    }
+
+    return filtered;
+  };
+
+  // Filter and paginate inconsistent columns
+  const getFilteredInconsistentColumns = () => {
+    let filtered = inconsistentColumns.filter(col =>
+      col.name.toLowerCase().includes(consistencySearch.toLowerCase())
+    );
+
+    if (consistencyFilter === "high") {
+      filtered = filtered.filter(col => (col.inconsistencyRatio || 0) > 0.2);
+    } else if (consistencyFilter === "moderate") {
+      filtered = filtered.filter(col => (col.inconsistencyRatio || 0) > 0.1 && (col.inconsistencyRatio || 0) <= 0.2);
+    } else if (consistencyFilter === "low") {
+      filtered = filtered.filter(col => (col.inconsistencyRatio || 0) <= 0.1);
+    }
+
+    return filtered;
+  };
+
+  const filteredSkewedColumns = getFilteredSkewedColumns();
+  const filteredInconsistentColumns = getFilteredInconsistentColumns();
+
   // Filter columns based on search
-  const filteredColumns = dataset.columns.filter((column) =>
-    column.name.toLowerCase().includes(search.toLowerCase())
+  const filteredColumns = dataset.columns.filter(column =>
+    (column.originalName || column.name).toLowerCase().includes(search.toLowerCase())
   );
   
   // Calculate pagination for the filtered columns
@@ -30,10 +88,28 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
   const startIdx = (page - 1) * columnsPerPage;
   const displayedColumns = filteredColumns.slice(startIdx, startIdx + columnsPerPage);
   
+  // Pagination for skewness section
+  const skewnessTotalPages = Math.ceil(filteredSkewedColumns.length / itemsPerPage);
+  const skewnessStartIdx = (skewnessPage - 1) * itemsPerPage;
+  const displayedSkewedColumns = filteredSkewedColumns.slice(skewnessStartIdx, skewnessStartIdx + itemsPerPage);
+
+  // Pagination for consistency section
+  const consistencyTotalPages = Math.ceil(filteredInconsistentColumns.length / itemsPerPage);
+  const consistencyStartIdx = (consistencyPage - 1) * itemsPerPage;
+  const displayedInconsistentColumns = filteredInconsistentColumns.slice(consistencyStartIdx, consistencyStartIdx + itemsPerPage);
+  
   // Reset to first page when search changes
   React.useEffect(() => {
     setPage(1);
   }, [search]);
+
+  React.useEffect(() => {
+    setSkewnessPage(1);
+  }, [skewnessSearch, skewnessFilter]);
+
+  React.useEffect(() => {
+    setConsistencyPage(1);
+  }, [consistencySearch, consistencyFilter]);
 
   return (
     <div className="space-y-6">
@@ -59,6 +135,52 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
           description="Detects potential outliers"
         />
       </div>
+
+      {/* Summary Statistics for Large Datasets */}
+      {dataset.columns.length > 100 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Data Quality Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                  {skewedColumns.length}
+                </div>
+                <div className="text-xs text-muted-foreground">Skewed Columns</div>
+                <div className="text-xs text-amber-600 dark:text-amber-400">
+                  {highlySkewedColumns.length} highly skewed
+                </div>
+              </div>
+              <div className="text-center p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+                <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                  {inconsistentColumns.length}
+                </div>
+                <div className="text-xs text-muted-foreground">Mixed Type Columns</div>
+                <div className="text-xs text-red-600 dark:text-red-400">
+                  {highlyInconsistentColumns.length} highly inconsistent
+                </div>
+              </div>
+              <div className="text-center p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  {dataset.columns.filter(col => col.type === 'QUANTITATIVE').length}
+                </div>
+                <div className="text-xs text-muted-foreground">Quantitative Columns</div>
+              </div>
+              <div className="text-center p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                  {dataset.columns.filter(col => col.type === 'QUALITATIVE').length}
+                </div>
+                <div className="text-xs text-muted-foreground">Qualitative Columns</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       
       <Card>
         <CardHeader>
@@ -95,7 +217,7 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
                           <li>Data diversity issues detected (duplicates in key columns or inappropriate uniqueness levels)</li>
                         )}
                         {consistencyScore < 80 && (
-                          <li>Inconsistent data types or mixed data types within columns</li>
+                          <li>Inconsistent data types or mixed data types within columns ({inconsistentColumns.length} columns affected)</li>
                         )}
                         {accuracyScore < 80 && (
                           <li>Potential outliers detected in numeric columns</li>
@@ -122,12 +244,17 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
                 )}
                 {consistencyScore < 100 && (
                   <li>
-                    Standardize data types and formats across columns, and resolve mixed data types within individual columns
+                    Standardize data types and formats across columns ({inconsistentColumns.length} columns need attention)
                   </li>
                 )}
                 {accuracyScore < 100 && (
                   <li>
                     Investigate and handle outliers in the dataset
+                  </li>
+                )}
+                {skewedColumns.length > 0 && (
+                  <li>
+                    Consider applying skewness transformations to {skewedColumns.length} skewed columns
                   </li>
                 )}
               </ul>
@@ -160,7 +287,16 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
               {displayedColumns.map((column) => (
                 <div key={column.name} className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-foreground">{column.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-foreground" title={column.name}>
+                        {column.originalName || column.name}
+                      </span>
+                      {column.originalName && column.originalName !== column.name && (
+                        <Badge variant="outline" className="text-xs">
+                          ID: {column.name}
+                        </Badge>
+                      )}
+                    </div>
                     <span className="text-xs text-muted-foreground">{column.type}</span>
                   </div>
                   <div className="space-y-1">
@@ -173,7 +309,7 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
                       className="h-1"
                     />
                   </div>
-                  {column.type === 'numeric' && column.skewness !== undefined && (
+                  {column.type === 'QUANTITATIVE' && column.skewness !== undefined && (
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-muted-foreground">Skewness</span>
@@ -230,38 +366,129 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
       
       <Card>
         <CardHeader>
-          <CardTitle>Data Skewness</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            Data Skewness
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          {dataset.columns.some(col => col.type === 'numeric' && col.skewness !== undefined) ? (
+          {skewedColumns.length > 0 ? (
             <div className="space-y-6">
               <div className="text-sm text-muted-foreground">
-                <p>Skewness measures how asymmetrical the distribution of values is in your numeric columns. 
+                <p>Skewness measures how asymmetrical the distribution of values is in your quantitative columns. 
                    High skewness (above 1 or below -1) indicates that your data might benefit from transformation before analysis.</p>
+              </div>
+
+              {/* Summary */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="text-center p-2 bg-amber-50 dark:bg-amber-950/20 rounded border border-amber-200 dark:border-amber-800">
+                  <div className="text-lg font-bold text-amber-600 dark:text-amber-400">{skewedColumns.length}</div>
+                  <div className="text-xs text-muted-foreground">Total Skewed</div>
+                </div>
+                <div className="text-center p-2 bg-orange-50 dark:bg-orange-950/20 rounded border border-orange-200 dark:border-orange-800">
+                  <div className="text-lg font-bold text-orange-600 dark:text-orange-400">{highlySkewedColumns.length}</div>
+                                     <div className="text-xs text-muted-foreground">Highly Skewed ({'>'}2)</div>
+                </div>
+                <div className="text-center p-2 bg-blue-50 dark:bg-blue-950/20 rounded border border-blue-200 dark:border-blue-800">
+                  <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                    {skewedColumns.filter(col => (col.skewness || 0) > 0).length}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Right Skewed</div>
+                </div>
+                <div className="text-center p-2 bg-purple-50 dark:bg-purple-950/20 rounded border border-purple-200 dark:border-purple-800">
+                  <div className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                    {skewedColumns.filter(col => (col.skewness || 0) < 0).length}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Left Skewed</div>
+                </div>
+              </div>
+
+              {/* Controls */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search skewed columns..."
+                    className="pl-8"
+                    value={skewnessSearch}
+                    onChange={(e) => setSkewnessSearch(e.target.value)}
+                  />
+                </div>
+                <Select value={skewnessFilter} onValueChange={setSkewnessFilter}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Filter by severity" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Skewed ({skewedColumns.length})</SelectItem>
+                    <SelectItem value="significant">Highly Skewed ({highlySkewedColumns.length})</SelectItem>
+                    <SelectItem value="moderate">Moderately Skewed ({skewedColumns.filter(col => Math.abs(col.skewness || 0) > 1 && Math.abs(col.skewness || 0) <= 2).length})</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="space-y-4">
-                <h4 className="text-sm font-medium">Skewed Columns</h4>
-                <div className="grid gap-4 md:grid-cols-2">
-                  {dataset.columns
-                    .filter(col => col.type === 'numeric' && col.skewness !== undefined && col.isSkewed)
-                    .map(col => (
-                      <div key={col.name} className="flex items-center p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
-                        <div className="flex-1">
-                          <div className="font-medium text-foreground">{col.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            Skewness: {col.skewness ? col.skewness.toFixed(2) : 'N/A'}
-                            {' '}
-                            ({col.skewness && col.skewness > 0 ? 'Right-skewed' : 'Left-skewed'})
+                <h4 className="text-sm font-medium">
+                  Skewed Columns 
+                  {filteredSkewedColumns.length !== skewedColumns.length && (
+                    <span className="text-muted-foreground ml-2">
+                      ({filteredSkewedColumns.length} of {skewedColumns.length})
+                    </span>
+                  )}
+                </h4>
+                
+                {filteredSkewedColumns.length > 0 ? (
+                  <>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {displayedSkewedColumns.map((col) => (
+                        <div key={col.name} className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
+                          <div className="flex-1">
+                            <div className="font-medium text-foreground">{col.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              Skewness: {col.skewness ? col.skewness.toFixed(2) : 'N/A'}
+                              {' '}
+                              ({col.skewness && col.skewness > 0 ? 'Right-skewed' : 'Left-skewed'})
+                            </div>
                           </div>
+                          <Badge variant={Math.abs(col.skewness || 0) > 2 ? "destructive" : "secondary"} className="text-xs">
+                            {Math.abs(col.skewness || 0) > 2 ? "High" : "Moderate"}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Pagination for skewness */}
+                    {skewnessTotalPages > 1 && (
+                      <div className="flex justify-between items-center mt-4">
+                        <div className="text-sm text-muted-foreground">
+                          Showing {skewnessStartIdx + 1} to {Math.min(skewnessStartIdx + itemsPerPage, filteredSkewedColumns.length)} of {filteredSkewedColumns.length} columns
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSkewnessPage(p => Math.max(1, p - 1))}
+                            disabled={skewnessPage === 1}
+                          >
+                            Previous
+                          </Button>
+                          <span className="px-3 py-1 text-sm text-muted-foreground">
+                            {skewnessPage} of {skewnessTotalPages}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSkewnessPage(p => Math.min(skewnessTotalPages, p + 1))}
+                            disabled={skewnessPage === skewnessTotalPages}
+                          >
+                            Next
+                          </Button>
                         </div>
                       </div>
-                    )                  )}
-                </div>
-                
-                {dataset.columns.filter(col => col.type === 'numeric' && col.skewness !== undefined && col.isSkewed).length === 0 && (
+                    )}
+                  </>
+                ) : (
                   <div className="text-center py-4 text-muted-foreground">
-                    No significantly skewed columns detected
+                    No skewed columns found matching current filters
                   </div>
                 )}
               </div>
@@ -278,12 +505,18 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
                   <li>
                     Consider square root transformation for moderately right-skewed data
                   </li>
+                  <li>
+                    Use the Preprocessing tab to apply skewness transformations automatically
+                  </li>
                 </ul>
               </div>
             </div>
           ) : (
             <div className="text-center py-4 text-muted-foreground">
-              Skewness information not available. Run the data analysis again to calculate skewness.
+              {dataset.columns.some(col => col.type === 'QUANTITATIVE' && col.skewness !== undefined) 
+                ? "No significantly skewed columns detected" 
+                : "Skewness information not available. Run the data analysis again to calculate skewness."
+              }
             </div>
           )}
         </CardContent>
@@ -291,69 +524,166 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
       
       <Card>
         <CardHeader>
-          <CardTitle>Data Type Consistency</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            Data Type Consistency
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          {dataset.columns.some(col => col.hasMixedTypes) ? (
+          {inconsistentColumns.length > 0 ? (
             <div className="space-y-6">
               <div className="text-sm text-muted-foreground">
-                <p>Mixed data types within a column can cause issues during analysis and modeling. 
-                   These columns contain different types of values (e.g., both numbers and text) that should be standardized.</p>
+                <p>Data type consistency measures how uniform the data types are within each column. 
+                   Mixed data types can cause issues during analysis and modeling.</p>
+              </div>
+
+              {/* Summary */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="text-center p-2 bg-red-50 dark:bg-red-950/20 rounded border border-red-200 dark:border-red-800">
+                  <div className="text-lg font-bold text-red-600 dark:text-red-400">{inconsistentColumns.length}</div>
+                  <div className="text-xs text-muted-foreground">Total Mixed</div>
+                </div>
+                <div className="text-center p-2 bg-orange-50 dark:bg-orange-950/20 rounded border border-orange-200 dark:border-orange-800">
+                  <div className="text-lg font-bold text-orange-600 dark:text-orange-400">{highlyInconsistentColumns.length}</div>
+                                     <div className="text-xs text-muted-foreground">Highly Mixed ({'>'}20%)</div>
+                </div>
+                <div className="text-center p-2 bg-yellow-50 dark:bg-yellow-950/20 rounded border border-yellow-200 dark:border-yellow-800">
+                  <div className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
+                    {inconsistentColumns.filter(col => (col.inconsistencyRatio || 0) > 0.1 && (col.inconsistencyRatio || 0) <= 0.2).length}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Moderate (10-20%)</div>
+                </div>
+                <div className="text-center p-2 bg-blue-50 dark:bg-blue-950/20 rounded border border-blue-200 dark:border-blue-800">
+                  <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                    {inconsistentColumns.filter(col => (col.inconsistencyRatio || 0) <= 0.1).length}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Low (≤10%)</div>
+                </div>
+              </div>
+
+              {/* Controls */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search inconsistent columns..."
+                    className="pl-8"
+                    value={consistencySearch}
+                    onChange={(e) => setConsistencySearch(e.target.value)}
+                  />
+                </div>
+                <Select value={consistencyFilter} onValueChange={setConsistencyFilter}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Filter by severity" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Mixed ({inconsistentColumns.length})</SelectItem>
+                    <SelectItem value="high">High {'>'}20% ({highlyInconsistentColumns.length})</SelectItem>
+                    <SelectItem value="moderate">Moderate 10-20% ({inconsistentColumns.filter(col => (col.inconsistencyRatio || 0) > 0.1 && (col.inconsistencyRatio || 0) <= 0.2).length})</SelectItem>
+                    <SelectItem value="low">Low ≤10% ({inconsistentColumns.filter(col => (col.inconsistencyRatio || 0) <= 0.1).length})</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="space-y-4">
-                <h4 className="text-sm font-medium">Columns with Mixed Data Types</h4>
-                <div className="grid gap-4 md:grid-cols-1">
-                  {dataset.columns
-                    .filter(col => col.hasMixedTypes && col.typeBreakdown)
-                    .map(col => (
-                      <div key={col.name} className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="font-medium text-foreground">{col.name}</div>
-                            <div className="text-xs text-red-600 dark:text-red-400 font-medium">
-                              {((col.inconsistencyRatio || 0) * 100).toFixed(1)}% inconsistent
+                <h4 className="text-sm font-medium">
+                  Columns with Mixed Data Types
+                  {filteredInconsistentColumns.length !== inconsistentColumns.length && (
+                    <span className="text-muted-foreground ml-2">
+                      ({filteredInconsistentColumns.length} of {inconsistentColumns.length})
+                    </span>
+                  )}
+                </h4>
+                
+                {filteredInconsistentColumns.length > 0 ? (
+                  <>
+                    <div className="space-y-3">
+                      {displayedInconsistentColumns.map((col) => (
+                        <div key={col.name} className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="font-medium text-foreground">{col.name}</div>
+                              <div className="flex items-center gap-2">
+                                <Badge 
+                                  variant={
+                                    (col.inconsistencyRatio || 0) > 0.2 ? "destructive" : 
+                                    (col.inconsistencyRatio || 0) > 0.1 ? "secondary" : "outline"
+                                  } 
+                                  className="text-xs"
+                                >
+                                  {((col.inconsistencyRatio || 0) * 100).toFixed(1)}% inconsistent
+                                </Badge>
+                              </div>
                             </div>
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            Classified as: <span className="font-medium">{col.type}</span>
-                          </div>
-                          {col.typeBreakdown && (
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              {col.typeBreakdown.numeric > 0 && (
-                                <div className="flex justify-between">
-                                  <span>Numeric values:</span>
-                                  <span className="font-medium">{col.typeBreakdown.numeric}</span>
-                                </div>
-                              )}
-                              {col.typeBreakdown.string > 0 && (
-                                <div className="flex justify-between">
-                                  <span>Text values:</span>
-                                  <span className="font-medium">{col.typeBreakdown.string}</span>
-                                </div>
-                              )}
-                              {col.typeBreakdown.boolean > 0 && (
-                                <div className="flex justify-between">
-                                  <span>Boolean values:</span>
-                                  <span className="font-medium">{col.typeBreakdown.boolean}</span>
-                                </div>
-                              )}
-                              {col.typeBreakdown.null > 0 && (
-                                <div className="flex justify-between">
-                                  <span>Missing values:</span>
-                                  <span className="font-medium">{col.typeBreakdown.null}</span>
-                                </div>
-                              )}
+                            <div className="text-xs text-muted-foreground">
+                              Classified as: <span className="font-medium">{col.type}</span>
                             </div>
-                          )}
+                            {col.typeBreakdown && (
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                {col.typeBreakdown.numeric > 0 && (
+                                  <div className="flex justify-between">
+                                    <span>Numeric values:</span>
+                                    <span className="font-medium">{col.typeBreakdown.numeric}</span>
+                                  </div>
+                                )}
+                                {col.typeBreakdown.string > 0 && (
+                                  <div className="flex justify-between">
+                                    <span>Text values:</span>
+                                    <span className="font-medium">{col.typeBreakdown.string}</span>
+                                  </div>
+                                )}
+                                {col.typeBreakdown.boolean > 0 && (
+                                  <div className="flex justify-between">
+                                    <span>Boolean values:</span>
+                                    <span className="font-medium">{col.typeBreakdown.boolean}</span>
+                                  </div>
+                                )}
+                                {col.typeBreakdown.null > 0 && (
+                                  <div className="flex justify-between">
+                                    <span>Missing values:</span>
+                                    <span className="font-medium">{col.typeBreakdown.null}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Pagination for consistency */}
+                    {consistencyTotalPages > 1 && (
+                      <div className="flex justify-between items-center mt-4">
+                        <div className="text-sm text-muted-foreground">
+                          Showing {consistencyStartIdx + 1} to {Math.min(consistencyStartIdx + itemsPerPage, filteredInconsistentColumns.length)} of {filteredInconsistentColumns.length} columns
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setConsistencyPage(p => Math.max(1, p - 1))}
+                            disabled={consistencyPage === 1}
+                          >
+                            Previous
+                          </Button>
+                          <span className="px-3 py-1 text-sm text-muted-foreground">
+                            {consistencyPage} of {consistencyTotalPages}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setConsistencyPage(p => Math.min(consistencyTotalPages, p + 1))}
+                            disabled={consistencyPage === consistencyTotalPages}
+                          >
+                            Next
+                          </Button>
                         </div>
                       </div>
-                    ))}
-                </div>
-                
-                {dataset.columns.filter(col => col.hasMixedTypes).length === 0 && (
+                    )}
+                  </>
+                ) : (
                   <div className="text-center py-4 text-muted-foreground">
-                    No mixed data type columns detected
+                    No mixed type columns found matching current filters
                   </div>
                 )}
               </div>
@@ -362,23 +692,23 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
                 <h4 className="text-sm font-medium">Recommendations</h4>
                 <ul className="list-disc space-y-2 pl-5 text-sm text-muted-foreground">
                   <li>
-                    <strong>Convert inconsistent values:</strong> Standardize the data type by converting all values to the same format
+                                         Review columns with high inconsistency ratios ({'>'}20%) first
                   </li>
                   <li>
-                    <strong>Handle numeric-in-text:</strong> If a categorical column contains mostly text but some numbers, convert numbers to text or vice versa
+                    Consider data cleaning to standardize formats within columns
                   </li>
                   <li>
-                    <strong>Clean data entry errors:</strong> Check if mixed types are due to data entry mistakes (e.g., "N/A" instead of empty cells)
+                    Use the Preprocessing tab to handle data type inconsistencies
                   </li>
                   <li>
-                    <strong>Split columns:</strong> Consider splitting columns with fundamentally different data types into separate columns
+                    For identifier columns, ensure all values follow the same format
                   </li>
                 </ul>
               </div>
             </div>
           ) : (
             <div className="text-center py-4 text-muted-foreground">
-              All columns have consistent data types
+              No mixed data type columns detected. All columns have consistent data types.
             </div>
           )}
         </CardContent>
@@ -439,22 +769,41 @@ function calculateUniquenessScore(dataset: DatasetType): number {
     
     // Different scoring logic based on data type
     switch (col.type) {
-      case 'categorical':
-        // For categorical: Good if reasonable number of categories (not too few, not too many)
+      case 'QUALITATIVE':
+        // For qualitative: Good if reasonable number of categories (not too few, not too many)
         if (uniqueRatio < 0.01) {
           // Too few categories (< 1% unique) - might be data entry error
           columnScore = 60;
         } else if (uniqueRatio > 0.8) {
-          // Too many categories (> 80% unique) - might be misclassified as categorical
+          // Too many categories (> 80% unique) - might be misclassified as qualitative
           columnScore = 70;
         } else {
-          // Good categorical distribution
+          // Good qualitative distribution
           columnScore = 100;
+        }
+        
+        // Special handling for identifier-like columns
+        if (col.name.toLowerCase().includes('id') || col.name.toLowerCase().includes('key')) {
+          // Looks like an identifier - should be highly unique
+          if (uniqueRatio > 0.95) {
+            columnScore = 100;
+          } else if (uniqueRatio > 0.8) {
+            columnScore = 80;
+          } else {
+            columnScore = 40; // Duplicate IDs are bad!
+          }
+        }
+        
+        // Handle boolean-like qualitative columns
+        if (col.uniqueValues <= 2) {
+          columnScore = 100; // Perfect for boolean/binary qualitative
+        } else if (col.uniqueValues <= 5) {
+          columnScore = 90;  // Good for small categorical sets
         }
         break;
         
-      case 'numeric':
-        // For numeric: Higher uniqueness is generally better
+      case 'QUANTITATIVE':
+        // For quantitative: Higher uniqueness is generally better
         if (uniqueRatio > 0.9) {
           columnScore = 100; // Excellent uniqueness
         } else if (uniqueRatio > 0.7) {
@@ -465,57 +814,6 @@ function calculateUniquenessScore(dataset: DatasetType): number {
           columnScore = 70;  // Low uniqueness
         } else {
           columnScore = 50;  // Very low uniqueness - potential duplicate issue
-        }
-        break;
-        
-      case 'text':
-        // For text: Check if it looks like an identifier or free text
-        const avgLength = col.uniqueValues > 0 ? nonMissingValues / col.uniqueValues : 0;
-        
-        if (col.name.toLowerCase().includes('id') || col.name.toLowerCase().includes('key')) {
-          // Looks like an identifier - should be highly unique
-          if (uniqueRatio > 0.95) {
-            columnScore = 100;
-          } else if (uniqueRatio > 0.8) {
-            columnScore = 80;
-          } else {
-            columnScore = 40; // Duplicate IDs are bad!
-          }
-        } else {
-          // Regular text column - moderate uniqueness expected
-          if (uniqueRatio > 0.8) {
-            columnScore = 100;
-          } else if (uniqueRatio > 0.5) {
-            columnScore = 90;
-          } else if (uniqueRatio > 0.2) {
-            columnScore = 80;
-          } else {
-            columnScore = 70; // Low uniqueness might be okay for text
-          }
-        }
-        break;
-        
-      case 'boolean':
-        // For boolean: Should have very few unique values (ideally 2)
-        if (col.uniqueValues <= 2) {
-          columnScore = 100; // Perfect for boolean
-        } else if (col.uniqueValues <= 5) {
-          columnScore = 80;  // Might be okay (true/false/null/maybe some text)
-        } else {
-          columnScore = 60;  // Too many values for boolean
-        }
-        break;
-        
-      case 'datetime':
-        // For datetime: Higher uniqueness usually better (unless it's date categories)
-        if (uniqueRatio > 0.7) {
-          columnScore = 100;
-        } else if (uniqueRatio > 0.5) {
-          columnScore = 90;
-        } else if (uniqueRatio > 0.3) {
-          columnScore = 80;
-        } else {
-          columnScore = 75; // Many repeated dates might be intentional
         }
         break;
     }
@@ -563,17 +861,17 @@ function calculateConsistencyScore(dataset: DatasetType): number {
       }
     }
     
-    // For categorical columns, check if they have reasonable number of categories
-    if (col.type === 'categorical' && col.uniqueValues !== undefined) {
+    // For qualitative columns, check if they have reasonable number of categories
+    if (col.type === 'QUALITATIVE' && col.uniqueValues !== undefined) {
       const categoryRatio = col.uniqueValues / dataset.rows;
       if (categoryRatio > 0.8) {
-        // Too many categories for a categorical column (might be misclassified)
+        // Too many categories for a qualitative column (might be misclassified)
         columnScore -= 20;
       }
     }
     
-    // For numeric columns, check for reasonable distribution
-    if (col.type === 'numeric' && col.outliers !== undefined) {
+    // For quantitative columns, check for reasonable distribution
+    if (col.type === 'QUANTITATIVE' && col.outliers !== undefined) {
       const outlierRatio = col.outliers / dataset.rows;
       if (outlierRatio > 0.2) {
         // High outlier percentage suggests inconsistent data
@@ -599,8 +897,8 @@ function calculateAccuracyScore(dataset: DatasetType): number {
   dataset.columns.forEach(col => {
     let columnAccuracy = 100; // Start with perfect accuracy
     
-    // Check for outliers in numeric columns
-    if (col.type === 'numeric' && col.outliers !== undefined) {
+    // Check for outliers in quantitative columns
+    if (col.type === 'QUANTITATIVE' && col.outliers !== undefined) {
       const outlierRatio = col.outliers / dataset.rows;
       // Penalize based on outlier percentage
       if (outlierRatio > 0.15) {
@@ -613,8 +911,8 @@ function calculateAccuracyScore(dataset: DatasetType): number {
       evaluatedColumns++;
     }
     
-    // Check for extreme skewness in numeric columns (indicates potential data issues)
-    if (col.type === 'numeric' && col.skewness !== undefined) {
+    // Check for extreme skewness in quantitative columns (indicates potential data issues)
+    if (col.type === 'QUANTITATIVE' && col.skewness !== undefined) {
       const absSkewness = Math.abs(col.skewness);
       if (absSkewness > 3) {
         columnAccuracy -= 15; // Very high skewness
@@ -626,40 +924,24 @@ function calculateAccuracyScore(dataset: DatasetType): number {
       evaluatedColumns++;
     }
     
-    // Check for reasonable unique value ratios in categorical columns
-    if (col.type === 'categorical' && col.uniqueValues !== undefined) {
-      const uniqueRatio = col.uniqueValues / (dataset.rows - col.missingValues);
-      // If almost every value is unique in a categorical column, it might indicate data issues
-      if (uniqueRatio > 0.95) {
-        columnAccuracy -= 20;
-      } else if (uniqueRatio > 0.9) {
-        columnAccuracy -= 10;
+    // Check for reasonable unique value ratios in qualitative columns
+    if (col.type === 'QUALITATIVE' && col.uniqueValues !== undefined) {
+      const uniqueRatio = col.uniqueValues / dataset.rows;
+      
+      // For qualitative data, very high uniqueness might indicate misclassification
+      if (uniqueRatio > 0.9 && !col.name.toLowerCase().includes('id') && !col.name.toLowerCase().includes('key')) {
+        columnAccuracy -= 10; // Might be misclassified as qualitative
       }
       evaluatedColumns++;
     }
     
-    // Penalize high missing values as they affect accuracy
-    if (col.missingPercent > 30) {
-      columnAccuracy -= 15;
-    } else if (col.missingPercent > 15) {
-      columnAccuracy -= 8;
-    } else if (col.missingPercent > 5) {
-      columnAccuracy -= 3;
-    }
-    
-    // Ensure score doesn't go below 0
+    // Ensure accuracy doesn't go below 0
     columnAccuracy = Math.max(0, columnAccuracy);
     totalAccuracyScore += columnAccuracy;
   });
   
-  // If no columns were evaluated for specific accuracy metrics, 
-  // base score on general data completeness
-  if (evaluatedColumns === 0) {
-    const completenessScore = calculateCompletenessScore(dataset);
-    return Math.max(85, completenessScore); // Assume good accuracy if data is complete
-  }
-  
-  return Math.round(totalAccuracyScore / dataset.columns.length);
+  // If no columns were evaluated for accuracy, assume perfect accuracy
+  return evaluatedColumns > 0 ? Math.round(totalAccuracyScore / evaluatedColumns) : 100;
 }
 
 function getQualityLabel(score: number): string {

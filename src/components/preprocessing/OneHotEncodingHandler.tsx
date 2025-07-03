@@ -62,7 +62,7 @@ export function OneHotEncodingHandler({
     
     // Filter for columns that are categorical
     return dataset.columns
-      .filter(column => column.type === 'categorical')
+      .filter(column => column.type === 'QUALITATIVE')
       .map(column => column.name);
   }, [dataset]);
 

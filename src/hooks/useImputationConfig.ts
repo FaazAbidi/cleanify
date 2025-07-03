@@ -22,9 +22,9 @@ export function useImputationConfig({ dataset }: UseImputationConfigProps): UseI
 
   // Determine default imputation method based on column type
   const getDefaultMethodForColumn = (columnInfo: ColumnInfo): ImputationMethod => {
-    if (columnInfo.type === 'numeric') {
+    if (columnInfo.type === 'QUANTITATIVE') {
       return 'impute_mean';
-    } else if (columnInfo.type === 'categorical' || columnInfo.type === 'text' || columnInfo.type === 'boolean') {
+    } else if (columnInfo.type === 'QUALITATIVE') {
       return 'impute_mode';
     } else if (columnInfo.type === 'datetime') {
       return 'impute_random';
@@ -84,7 +84,7 @@ export function useImputationConfig({ dataset }: UseImputationConfigProps): UseI
       if (columnInfo) {
         // Determine if the column is quantitative or qualitative
         const columnType = 
-          columnInfo.type === 'numeric' ? 'QUANTITATIVE' : 'QUALITATIVE';
+          columnInfo.type === 'QUANTITATIVE' ? 'QUANTITATIVE' : 'QUALITATIVE';
 
         columns[config.columnName] = {
           type: columnType,

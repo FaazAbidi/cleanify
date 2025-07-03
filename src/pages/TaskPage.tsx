@@ -14,6 +14,7 @@ import { TaskMetadata } from "@/components/TaskMetadata";
 import { TaskVersionSelector } from "@/components/TaskVersionSelector";
 import { TaskVersionTabs, TaskVersionTabsRef } from "@/components/TaskVersionTabs";
 import { DownloadButton } from "@/components/DownloadButton";
+import { useOptimizedTaskData } from "@/hooks/useOptimizedTaskData";
 
 // Create a context to expose the tab functions to deeply nested components
 import { createContext } from "react";
@@ -53,15 +54,17 @@ const TaskPage = () => {
     refreshVersions 
   } = useTaskVersions(taskId);
   
-  const { 
+  const {
     taskData,
-    loadingTaskData, 
-    processingProgress, 
+    loadingTaskData,
+    processingProgress,
+    processingStage,
     selectedTask,
-    setTaskData,
     loadTaskData,
-    fileData
-  } = useTaskData();
+    setTaskData,
+    fileData,
+    setFileData
+  } = useOptimizedTaskData();
 
   // Use the preprocessing status hook and pass refreshVersions to update versions when status changes
   const { isProcessing, processingVersion, currentStatus } = usePreprocessingStatus(

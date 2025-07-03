@@ -26,7 +26,7 @@ export function usePCAConfig({ dataset }: UsePCAConfigProps) {
     if (!dataset) return [];
     
     return dataset.columns
-      .filter(column => column.type === 'numeric')
+      .filter(column => column.type === 'QUANTITATIVE')
       .map(column => column.name);
   }, [dataset]);
 

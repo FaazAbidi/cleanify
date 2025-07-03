@@ -19,4 +19,11 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // Add Web Worker support
+  worker: {
+    format: 'es'
+  },
+  optimizeDeps: {
+    exclude: ['@/workers/dataProcessingWorker.ts']
+  }
 }));
