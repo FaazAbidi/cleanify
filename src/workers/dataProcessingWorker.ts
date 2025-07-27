@@ -21,6 +21,19 @@ interface ColumnMapping {
   originalToIdsMap: Record<string, string[]>;
 }
 
+// At the top of the file, add the helper function
+/**
+ * Format column names with their IDs for API calls
+ * @param columnName The column name 
+ * @param originalName The original column name
+ * @param columnIndex The column index (0-based)
+ * @returns String in "originalName$id" format where id is columnIndex+1
+ */
+function formatColumnNameWithId(columnName: string, originalName: string | undefined, columnIndex: number): string {
+  // Format: originalName$columnIndex+1 (1-based indexing)
+  return `${originalName || columnName}$${columnIndex + 1}`;
+}
+
 // Listen for messages from main thread
 self.onmessage = function(e: MessageEvent<ProcessingMessage>) {
   const { type, payload, batchId } = e.data;
@@ -70,8 +83,9 @@ function processColumnsBatch(
       const columnData = rowData.map((row: any[]) => row[i]);
       
       // Use provided data type if available, otherwise infer
-      // Check both unique ID and original name for backward compatibility
-      const type = dataTypes?.[uniqueId] || dataTypes?.[originalName] || inferSimplifiedDataType(columnData);
+      // Check both formatted key and original key for backward compatibility
+      const formattedKey = formatColumnNameWithId(uniqueId, originalName, i);
+      const type = dataTypes?.[formattedKey] || dataTypes?.[uniqueId] || dataTypes?.[originalName] || inferSimplifiedDataType(columnData);
       const stats = calculateColumnStats(columnData, type);
       
       columns.push({
@@ -242,14 +256,26 @@ function detectDuplicates({ rowData }: any, batchId: string) {
 
 // Calculate dataset statistics
 function calculateStatistics({ rowData, columns }: any, batchId: string) {
+  // Generate data types with proper column ID formatting
+  const dataTypesByColumn = columns.reduce((acc: any, col: any, index: number) => {
+    // Use the format function to create the key in name$id format
+    const formattedKey = formatColumnNameWithId(col.name, col.originalName, index);
+    acc[formattedKey] = col.type;
+    return acc;
+  }, {});
+
+  // Count data types for summary statistics
+  const dataTypesCounts = columns.reduce((acc: any, col: any) => {
+    acc[col.type] = (acc[col.type] || 0) + 1;
+    return acc;
+  }, {});
+  
   const stats = {
     totalRows: rowData.length,
     totalColumns: columns.length,
     missingValues: columns.reduce((sum: number, col: any) => sum + (col.missingValues || 0), 0),
-    dataTypes: columns.reduce((acc: any, col: any) => {
-      acc[col.type] = (acc[col.type] || 0) + 1;
-      return acc;
-    }, {})
+    dataTypes: dataTypesCounts,
+    dataTypesByColumn // Add the column-specific data types with proper formatting
   };
   
   postMessage({

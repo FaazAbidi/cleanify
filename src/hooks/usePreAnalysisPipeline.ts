@@ -2,11 +2,13 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { PreAnalysisConfig, PreAnalysisResult } from '@/types/methods';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/sonner';
+import { formatColumnNameWithId } from '@/lib/data-utils';
+import { DatasetType } from '@/types/dataset';
 
 interface UsePreAnalysisPipelineReturn {
   isSubmitting: boolean;
   isPolling: boolean;
-  submitPreAnalysis: (config: PreAnalysisConfig, versionId: number) => Promise<{ success: boolean; taskMethodId?: number; error?: string }>;
+  submitPreAnalysis: (config: PreAnalysisConfig, versionId: number, dataset?: DatasetType | null) => Promise<{ success: boolean; taskMethodId?: number; error?: string }>;
   pollPreAnalysisResult: (taskMethodId: number) => Promise<PreAnalysisResult | null>;
   startPolling: (taskMethodId: number, onResult: (result: PreAnalysisResult) => void) => void;
   stopPolling: () => void;
@@ -49,16 +51,25 @@ export function usePreAnalysisPipeline(): UsePreAnalysisPipelineReturn {
     }
   }, []);
 
-  const submitPreAnalysis = useCallback(async (config: PreAnalysisConfig, versionId: number): Promise<{ success: boolean; taskMethodId?: number; error?: string }> => {
+  const submitPreAnalysis = useCallback(async (
+    config: PreAnalysisConfig, 
+    versionId: number,
+    dataset?: DatasetType | null
+  ): Promise<{ success: boolean; taskMethodId?: number; error?: string }> => {
     setIsSubmitting(true);
     
     try {
+      // Transform column names in config to include IDs if dataset is provided
+      const transformedConfig = dataset 
+        ? transformPreAnalysisConfig(config, dataset) 
+        : config;
+      
       const response = await fetch(`${BACKEND_BASE_URL}/pre-analysis`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(config),
+        body: JSON.stringify(transformedConfig),
       });
 
       if (!response.ok) {
@@ -87,6 +98,46 @@ export function usePreAnalysisPipeline(): UsePreAnalysisPipelineReturn {
       setIsSubmitting(false);
     }
   }, []);
+
+  // Function to transform column names in pre-analysis config
+  const transformPreAnalysisConfig = (config: PreAnalysisConfig, dataset: DatasetType): PreAnalysisConfig => {
+    if (!dataset) return config;
+    
+    const transformedConfig = { ...config };
+    
+    console.log('Original pre-analysis config:', { 
+      target: config.target || config.target_variable,
+      selectedColumns: config.selected_columns ? config.selected_columns.length : 0
+    });
+    
+    // Transform target variable if present
+    if (transformedConfig.target_variable) {
+      const originalTarget = transformedConfig.target_variable;
+      transformedConfig.target_variable = formatColumnNameWithId(transformedConfig.target_variable, dataset);
+      console.log(`Target variable transformed: "${originalTarget}" => "${transformedConfig.target_variable}"`);
+    }
+
+    // Also transform target if present (different field name used in some cases)
+    if (transformedConfig.target) {
+      const originalTarget = transformedConfig.target;
+      transformedConfig.target = formatColumnNameWithId(transformedConfig.target, dataset);
+      console.log(`Target transformed: "${originalTarget}" => "${transformedConfig.target}"`);
+    }
+    
+    // Transform selected columns if present
+    if (Array.isArray(transformedConfig.selected_columns)) {
+      transformedConfig.selected_columns = transformedConfig.selected_columns.map(
+        (col: string) => {
+          const transformedCol = formatColumnNameWithId(col, dataset);
+          console.log(`Selected column transformed: "${col}" => "${transformedCol}"`);
+          return transformedCol;
+        }
+      );
+      console.log(`Transformed ${transformedConfig.selected_columns.length} selected columns`);
+    }
+    
+    return transformedConfig;
+  };
 
   const pollPreAnalysisResult = useCallback(async (taskMethodId: number): Promise<PreAnalysisResult | null> => {
     try {

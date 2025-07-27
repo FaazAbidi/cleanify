@@ -1,12 +1,14 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { DatasetType, ColumnInfo, ColumnMapping } from "@/types/dataset";
+import { ColumnInfo, ColumnMapping, DatasetType } from "@/types/dataset";
 import { Tables } from "@/integrations/supabase/types";
 import { 
   inferSimplifiedDataType, 
   detectCSVSeparator,
   processCSVHeaders,
-  createColumnsFromDataTypes
+  createColumnsFromDataTypes,
+  createDataTypesFromColumns,
+  formatColumnNameWithId
 } from "@/lib/data-utils";
 import { useToast } from "@/components/ui/use-toast";
 import { TaskVersion } from "@/types/version";
@@ -595,19 +597,32 @@ export function useOptimizedTaskData() {
           // Infer types - pass columnMapping
           columns = await processColumnsWithWorker(rowData, uniqueHeaders, undefined, columnMapping);
           
-          // Store inferred types for original data using unique IDs
+          // Update code to store data types with name$id format
           if (taskMethod.prev_version === null && columns.length > 0) {
-            const dataTypesToStore = columns.reduce((acc, col) => {
-              acc[col.name] = col.type; // Store using unique ID
-              return acc;
-            }, {} as Record<string, 'QUANTITATIVE' | 'QUALITATIVE'>);
+            // Create temporary dataset to use with formatColumnNameWithId
+            const tempDataset = {
+              filename: fileDetails.file_name || 'Unknown',
+              columns: columns,
+              rows: rowData.length,
+              rawData: rowData,
+              columnNames: uniqueHeaders,
+              originalColumnNames: originalHeaders,
+              columnMapping: columnMapping,
+              missingValuesCount: 0,
+              duplicateRowsCount: 0,
+              duplicateColumnsCount: 0,
+              dataTypes: {}
+            };
+
+            // Use createDataTypesFromColumns to properly format keys as name$id
+            const dataTypesToStore = createDataTypesFromColumns(columns, tempDataset);
             
             try {
               await supabase
                 .from('TaskMethods')
                 .update({ data_types: dataTypesToStore })
                 .eq('id', taskMethod.id);
-              console.log('Data types stored successfully');
+              console.log('Data types stored successfully with name$id format:', dataTypesToStore);
             } catch (error) {
               console.warn('Failed to store data types:', error);
             }

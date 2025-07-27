@@ -1,37 +1,34 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { DatasetType } from '@/types/dataset';
-import { SkewnessMethod } from '@/types/methods';
-import { getSkewedColumns } from '@/lib/data-utils';
+import { formatColumnNameWithId } from '@/lib/data-utils';
 
-type ColumnConfig = {
+interface SkewnessConfig {
   columnName: string;
-  method: SkewnessMethod;
-  value: string | null;
-};
+  method?: 'log' | 'sqrt' | 'boxcox' | 'yeo-johnson';
+}
 
-type UseSkewnessConfigProps = {
+interface UseSkewnessConfigProps {
   dataset: DatasetType | null;
-};
+}
 
-type UseSkewnessConfigReturn = {
+interface UseSkewnessConfigReturn {
   selectedColumns: string[];
   setSelectedColumns: (columns: string[]) => void;
-  columnConfigurations: ColumnConfig[];
-  updateColumnConfiguration: (columnName: string, updates: Partial<ColumnConfig>) => void;
-  getDefaultMethodForColumn: (columnName: string) => SkewnessMethod;
-  generatePayload: () => any;
-};
+  columnConfigurations: SkewnessConfig[];
+  updateColumnConfig: (columnName: string, config: Partial<SkewnessConfig>) => void;
+  generatePayload: () => any | null;
+}
 
 export function useSkewnessConfig({ dataset }: UseSkewnessConfigProps): UseSkewnessConfigReturn {
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
-  const [columnConfigurations, setColumnConfigurations] = useState<ColumnConfig[]>([]);
+  const [columnConfigurations, setColumnConfigurations] = useState<SkewnessConfig[]>([]);
   
   // Initialize configurations when selected columns change
   useEffect(() => {
     if (!dataset || !selectedColumns.length) return;
     
     // Initialize configuration for each selected column
-    const initialConfigs: ColumnConfig[] = selectedColumns.map(columnName => {
+    const initialConfigs: SkewnessConfig[] = selectedColumns.map(columnName => {
       // Find existing config or create a new one
       const existingConfig = columnConfigurations.find(config => config.columnName === columnName);
       
@@ -39,53 +36,29 @@ export function useSkewnessConfig({ dataset }: UseSkewnessConfigProps): UseSkewn
         return existingConfig;
       }
       
-      // Get default method for this column
-      const defaultMethod = getDefaultMethodForColumn(columnName);
-      
       return {
         columnName,
-        method: defaultMethod,
-        value: null // Skewness methods don't usually need a value
+        method: 'log' as const // explicitly typed as literal
       };
     });
     
     setColumnConfigurations(initialConfigs);
   }, [selectedColumns, dataset]);
   
-  // Get default method based on column characteristics (like skewness direction)
-  const getDefaultMethodForColumn = (columnName: string): SkewnessMethod => {
-    if (!dataset) return 'log';
-    
-    const columnInfo = dataset.columns.find(col => col.name === columnName);
-    
-    if (columnInfo && columnInfo.skewness !== undefined) {
-      // For positive skewness, log is often good
-      // For negative skewness, square root might be better
-      if (columnInfo.skewness > 0) {
-        return 'log';
-      } else {
-        return 'sqrt';
-      }
-    }
-    
-    // Default to log transform
-    return 'log';
-  };
-  
-  // Update a column's configuration
-  const updateColumnConfiguration = (columnName: string, updates: Partial<ColumnConfig>) => {
-    setColumnConfigurations(prevConfigs => {
-      return prevConfigs.map(config => {
-        if (config.columnName === columnName) {
-          return { ...config, ...updates };
+  // Update a single column's config
+  const updateColumnConfig = useCallback((columnName: string, config: Partial<SkewnessConfig>) => {
+    setColumnConfigurations(currentConfigs => {
+      return currentConfigs.map(colConfig => {
+        if (colConfig.columnName === columnName) {
+          return { ...colConfig, ...config };
         }
-        return config;
+        return colConfig;
       });
     });
-  };
+  }, []);
   
   // Generate payload for API call
-  const generatePayload = () => {
+  const generatePayload = useCallback(() => {
     if (!dataset || !selectedColumns.length || !columnConfigurations.length) {
       return null;
     }
@@ -93,10 +66,13 @@ export function useSkewnessConfig({ dataset }: UseSkewnessConfigProps): UseSkewn
     const columns: Record<string, any> = {};
     
     columnConfigurations.forEach(config => {
-      columns[config.columnName] = {
+      // Format column name with ID for API
+      const formattedColumnName = formatColumnNameWithId(config.columnName, dataset);
+      
+      columns[formattedColumnName] = {
         type: "QUANTITATIVE",
-        step: config.method,
-        value: config.value
+        step: config.method || 'log',
+        value: null
       };
     });
     
@@ -108,14 +84,13 @@ export function useSkewnessConfig({ dataset }: UseSkewnessConfigProps): UseSkewn
       target: null,
       columns
     };
-  };
+  }, [dataset, selectedColumns, columnConfigurations]);
   
   return {
     selectedColumns,
     setSelectedColumns,
     columnConfigurations,
-    updateColumnConfiguration,
-    getDefaultMethodForColumn,
+    updateColumnConfig,
     generatePayload
   };
 } 

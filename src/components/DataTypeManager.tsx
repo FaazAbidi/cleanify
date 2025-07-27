@@ -16,8 +16,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Search, Edit3, CheckSquare, Square } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
-import { calculateColumnStats, inferSimplifiedDataType, updateVersionDataTypes, createDataTypesFromColumns } from "@/lib/data-utils";
+import { 
+  calculateColumnStats, 
+  inferSimplifiedDataType, 
+  updateVersionDataTypes, 
+  createDataTypesFromColumns,
+  checkDataTypeConsistency 
+} from "@/lib/data-utils";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DataTypeManagerProps {
   dataset: DatasetType;
@@ -234,11 +241,53 @@ export const DataTypeManager = ({ dataset, onDatasetUpdate, versionId }: DataTyp
       };
 
       // If versionId is provided, persist changes to database
+      let databaseUpdateSuccessful = true;
       if (versionId) {
-        const dataTypesToStore = createDataTypesFromColumns(columns);
-        const success = await updateVersionDataTypes(versionId, dataTypesToStore);
+        toast({
+          title: "Saving changes",
+          description: "Updating data types in the database...",
+        });
+
+        // First check what's currently in the database for debugging
+        try {
+          const { data: currentData } = await supabase
+            .from('TaskMethods')
+            .select('data_types')
+            .eq('id', versionId)
+            .single();
+            
+          if (currentData && currentData.data_types) {
+            console.log('Current data types in database:', currentData.data_types);
+          }
+        } catch (checkError) {
+          console.error('Error checking current data types:', checkError);
+        }
+
+        // Update the call to createDataTypesFromColumns to include dataset parameter
+        const dataTypesToStore = createDataTypesFromColumns(columns, dataset);
         
-        if (!success) {
+        // Debug: Check consistency between current and new data types
+        try {
+          const { data: currentData } = await supabase
+            .from('TaskMethods')
+            .select('data_types')
+            .eq('id', versionId)
+            .single();
+            
+          if (currentData && currentData.data_types) {
+            checkDataTypeConsistency(
+              currentData.data_types as Record<string, 'QUANTITATIVE' | 'QUALITATIVE'>, 
+              dataTypesToStore
+            );
+          }
+        } catch (checkError) {
+          console.error('Error in consistency check:', checkError);
+        }
+        
+        // Wait for the update to complete
+        databaseUpdateSuccessful = await updateVersionDataTypes(versionId, dataTypesToStore);
+        
+        if (!databaseUpdateSuccessful) {
           toast({
             title: "Error",
             description: "Failed to save data type changes to database. Changes applied locally only.",
@@ -247,13 +296,16 @@ export const DataTypeManager = ({ dataset, onDatasetUpdate, versionId }: DataTyp
         } else {
           toast({
             title: "Success",
-            description: "Data type changes saved successfully.",
+            description: "Data type changes saved successfully to the database.",
           });
         }
       }
 
-      onDatasetUpdate(updatedDataset);
-      setHasChanges(false);
+      // Only update local state if database update was successful or if we're not saving to database
+      if (!versionId || databaseUpdateSuccessful) {
+        onDatasetUpdate(updatedDataset);
+        setHasChanges(false);
+      }
     } catch (error) {
       console.error('Error applying data type changes:', error);
       toast({

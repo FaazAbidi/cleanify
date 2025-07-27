@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { DatasetType, ColumnInfo } from '@/types/dataset';
 import { ColumnImputationConfig } from '@/components/preprocessing/ImputationMethodSelector';
 import { ImputationMethod, Method, MethodConfig } from '@/types/methods';
+import { formatColumnNameWithId } from '@/lib/data-utils';
 
 interface UseImputationConfigProps {
   dataset: DatasetType | null;
@@ -85,14 +86,22 @@ export function useImputationConfig({ dataset }: UseImputationConfigProps): UseI
         // Determine if the column is quantitative or qualitative
         const columnType = 
           columnInfo.type === 'QUANTITATIVE' ? 'QUANTITATIVE' : 'QUALITATIVE';
-
-        columns[config.columnName] = {
+          
+        // Format the column key in the proper "name$id" format
+        const formattedKey = formatColumnNameWithId(config.columnName, dataset);
+        
+        // Log for debugging
+        console.log(`Column mapping: ${config.columnName} → ${formattedKey}`);
+        
+        columns[formattedKey] = {
           type: columnType,
           step: config.method,
           value: config.method === 'impute_constant' ? config.value : null
         };
       }
     });
+    
+    console.log('Final payload columns:', Object.keys(columns));
     
     return {
       technique: 'data_cleaning' as const,

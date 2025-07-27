@@ -109,7 +109,30 @@ export const CreateTaskDialog = ({ open, onOpenChange, onTaskCreated }: CreateTa
       }
       
       // Infer data types from the sample data
-      const inferredDataTypes = inferDataTypesForOriginalData(sampleData, headers);
+      const basicColumnInfo = headers.map((header, index) => ({
+        name: header, 
+        originalName: header,
+        type: 'QUANTITATIVE' as const, // Default to QUANTITATIVE, will be properly inferred later
+        uniqueValues: 0,
+        missingValues: 0,
+        missingPercent: 0
+      }));
+
+      // Create a temporary dataset to use for column ID formatting
+      const tempDataset = {
+        filename: file.name,
+        columns: basicColumnInfo,
+        rows: sampleData.length,
+        rawData: sampleData,
+        columnNames: headers,
+        originalColumnNames: headers,
+        missingValuesCount: 0,
+        duplicateRowsCount: 0,
+        duplicateColumnsCount: 0,
+        dataTypes: {}
+      };
+
+      const inferredDataTypes = inferDataTypesForOriginalData(sampleData, headers, tempDataset);
       console.log('Inferred data types for original data:', inferredDataTypes);
 
       // 2. Upload the raw data file to Supabase Storage

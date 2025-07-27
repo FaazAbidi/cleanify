@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DatasetType, ColumnInfo } from '@/types/dataset';
 import { OutlierMethod, Method, MethodConfig } from '@/types/methods';
-import { getOutlierIndices } from '@/lib/data-utils';
+import { getOutlierIndices, formatColumnNameWithId } from '@/lib/data-utils';
 
 export interface ColumnOutlierConfig {
   columnName: string;
@@ -122,7 +122,10 @@ export function useOutlierConfig({ dataset }: UseOutlierConfigProps): UseOutlier
         // Outliers are only relevant for quantitative columns
         const columnType = 'QUANTITATIVE';
 
-        columns[config.columnName] = {
+        // Format the column key in the proper "name$id" format
+        const formattedKey = formatColumnNameWithId(config.columnName, dataset);
+
+        columns[formattedKey] = {
           type: columnType,
           step: config.method,
           value: null

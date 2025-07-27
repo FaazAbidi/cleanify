@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { DatasetType } from '@/types/dataset';
+import { formatColumnNameWithId } from '@/lib/data-utils';
 
 export interface BinningColumnConfig {
   columnName: string;
@@ -58,7 +59,9 @@ export function useBinningConfig({ dataset }: UseBinningConfigProps) {
     
     columnConfigurations.forEach(config => {
       if (selectedColumns.includes(config.columnName)) {
-        configs[config.columnName] = {
+        // Format the column key properly
+        const formattedKey = formatColumnNameWithId(config.columnName, dataset);
+        configs[formattedKey] = {
           type: 'QUANTITATIVE',
           step: config.strategy,
           value: config.binCount
@@ -71,21 +74,32 @@ export function useBinningConfig({ dataset }: UseBinningConfigProps) {
 
   // Generate the final payload
   const generatePayload = useCallback(() => {
-    if (selectedColumns.length === 0) {
+    if (!dataset || selectedColumns.length === 0) {
       console.error('At least 1 column must be selected for binning');
       return null;
     }
+
+    const configuredColumns = {};
+    columnConfigurations.forEach(config => {
+      if (selectedColumns.includes(config.columnName)) {
+        const formattedKey = formatColumnNameWithId(config.columnName, dataset);
+        configuredColumns[formattedKey] = {
+          type: 'QUANTITATIVE',
+          step: config.strategy,
+          value: config.binCount
+        };
+      }
+    });
 
     return {
       technique: 'feature_engineering',
       method: 'perform_binning',
       step: null,
       value: null,
-      taskMethodId: '213', // This would typically come from props or context
       target: null,
-      columns: generateColumnConfigurations
+      columns: configuredColumns
     };
-  }, [selectedColumns, generateColumnConfigurations]);
+  }, [selectedColumns, columnConfigurations, dataset]);
 
   return {
     selectedColumns,

@@ -14,6 +14,7 @@ import { TaskVersion } from '@/types/version';
 import { PreAnalysisModel, PreAnalysisResult, PreAnalysisColumnConfig } from '@/types/methods';
 import { usePreAnalysisConfig } from '@/hooks/usePreAnalysisConfig';
 import { usePreAnalysisPipeline } from '@/hooks/usePreAnalysisPipeline';
+import { formatColumnNameWithId } from '@/lib/data-utils';
 import { PreAnalysisResults } from './pre-analysis/PreAnalysisResults';
 import { toast } from '@/components/ui/sonner';
 
@@ -119,6 +120,8 @@ export const PreAnalysis = memo(function PreAnalysis({
       selectedColumns.forEach(columnName => {
         const column = dataset.columns.find(col => col.name === columnName);
         if (column) {
+          // The API doesn't need the formatted column names here in the columnConfigs 
+          // as it will be transformed in the usePreAnalysisPipeline hook
           columnConfigs[columnName] = {
             type: column.type,
             step: null,
@@ -142,7 +145,9 @@ export const PreAnalysis = memo(function PreAnalysis({
     }
 
     const fullConfig = getFullConfig(selectedVersion.id.toString());
-    const result = await submitPreAnalysis(fullConfig, selectedVersion.id);
+    
+    // Pass the dataset to submitPreAnalysis for column ID formatting
+    const result = await submitPreAnalysis(fullConfig, selectedVersion.id, dataset);
 
     if (result.success && result.taskMethodId) {
       setTaskMethodId(result.taskMethodId);
@@ -284,11 +289,17 @@ export const PreAnalysis = memo(function PreAnalysis({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem key="none-target" value="none">No target</SelectItem>
-                {targetColumns.map((column, index) => (
-                  <SelectItem key={`target-${index}-${column}`} value={column}>
-                    {column}
-                  </SelectItem>
-                ))}
+                {targetColumns.map((column, index) => {
+                  // For display we show the original name, but the value is the column ID
+                  const columnInfo = dataset?.columns.find(col => col.name === column);
+                  const displayName = columnInfo?.originalName || column;
+                  
+                  return (
+                    <SelectItem key={`target-${index}-${column}`} value={column}>
+                      {displayName}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>

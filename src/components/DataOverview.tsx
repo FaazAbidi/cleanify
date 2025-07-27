@@ -104,6 +104,17 @@ export const DataOverview = ({ dataset, onSelectColumn }: DataOverviewProps) => 
                   <Badge variant="secondary">{count}</Badge>
                 </div>
               ))}
+            {/* Data Dimensions in Badge UI */}
+            <div className="flex gap-2 mb-2">
+              <Badge variant="outline" className="flex items-center gap-1 px-2 py-1 text-xs">
+                <span className="font-semibold">{(dataset.rows + 1).toLocaleString()}</span>
+                <span className="text-muted-foreground">rows</span>
+              </Badge>
+              <Badge variant="outline" className="flex items-center gap-1 px-2 py-1 text-xs">
+                <span className="font-semibold">{dataset.columns.length.toLocaleString()}</span>
+                <span className="text-muted-foreground">columns</span>
+              </Badge>
+            </div>
             </div>
           </CardContent>
         </Card>

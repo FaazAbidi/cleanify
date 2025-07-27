@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
 
 interface DataQualityProps {
   dataset: DatasetType;
@@ -21,6 +22,7 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
   const [consistencySearch, setConsistencySearch] = useState("");
   const [skewnessFilter, setSkewnessFilter] = useState<string>("all"); // all, significant, moderate
   const [consistencyFilter, setConsistencyFilter] = useState<string>("all"); // all, high, moderate, low
+  const { toast } = useToast();
   
   const columnsPerPage = 8;
   const itemsPerPage = 12; // For skewness and consistency sections
@@ -78,10 +80,42 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
   const filteredSkewedColumns = getFilteredSkewedColumns();
   const filteredInconsistentColumns = getFilteredInconsistentColumns();
 
-  // Filter columns based on search
-  const filteredColumns = dataset.columns.filter(column =>
-    (column.originalName || column.name).toLowerCase().includes(search.toLowerCase())
-  );
+  // Helper function to extract numeric ID from a column
+  const getColumnNumericId = (columnId: string): string | null => {
+    // First try to extract ID from "$number" format
+    const match = columnId.match(/\$(\d+)$/);
+    if (match) return match[1];
+    
+    // If that fails, try to find the column's index in the dataset
+    const index = dataset.columns.findIndex(col => col.name === columnId);
+    if (index >= 0) return String(index + 1);
+    
+    return null;
+  };
+
+  // Filter columns based on search - search both original names and unique IDs
+  const filteredColumns = dataset.columns.filter(column => {
+    const displayName = column.originalName || column.name;
+    const numericId = getColumnNumericId(column.name);
+    
+    // If search is empty, include all columns
+    if (!search) return true;
+    
+    // If search starts with "#" or contains "id:", treat it as ID search
+    if (search.startsWith('#') || search.toLowerCase().includes('id:')) {
+      // Extract numeric part
+      const searchNumeric = search.replace(/[^\d]/g, '');
+      
+      // If we have a numeric search, match against the column ID
+      if (searchNumeric && numericId) {
+        return numericId === searchNumeric;
+      }
+    }
+    
+    // Otherwise do a normal text search
+    return displayName.toLowerCase().includes(search.toLowerCase()) || 
+           column.name.toLowerCase().includes(search.toLowerCase());
+  });
   
   // Calculate pagination for the filtered columns
   const totalPages = Math.ceil(filteredColumns.length / columnsPerPage);
@@ -110,6 +144,110 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
   React.useEffect(() => {
     setConsistencyPage(1);
   }, [consistencySearch, consistencyFilter]);
+
+  // State for "Go to ID" functionality
+  const [goToIdInput, setGoToIdInput] = useState<string>("");
+  const [goToSkewnessIdInput, setGoToSkewnessIdInput] = useState<string>("");
+  const [goToConsistencyIdInput, setGoToConsistencyIdInput] = useState<string>("");
+  
+  // Jump to page containing a specific column ID in main section
+  const jumpToColumnId = (id: string) => {
+    if (!id || !filteredColumns.length) return;
+    
+    // Find the column with the specified ID in filtered columns
+    const columnIndex = filteredColumns.findIndex(col => {
+      const colId = getColumnNumericId(col.name);
+      return colId === id;
+    });
+    
+    if (columnIndex === -1) {
+      toast({
+        title: "Column not found",
+        description: `No column with ID #${id} found in the current filtered list.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Calculate the page number for this column
+    const targetPage = Math.floor(columnIndex / columnsPerPage) + 1;
+    setPage(targetPage);
+    
+    // Clear the input
+    setGoToIdInput("");
+    
+    // Notify the user
+    toast({
+      title: "Column found",
+      description: `Navigated to column with ID #${id}.`
+    });
+  };
+  
+  // Jump to page containing a specific column ID in skewness section
+  const jumpToSkewnessColumnId = (id: string) => {
+    if (!id || !filteredSkewedColumns.length) return;
+    
+    // Find the column with the specified ID in filtered skewness columns
+    const columnIndex = filteredSkewedColumns.findIndex(col => {
+      const colId = getColumnNumericId(col.name);
+      return colId === id;
+    });
+    
+    if (columnIndex === -1) {
+      toast({
+        title: "Column not found",
+        description: `No column with ID #${id} found in the skewed columns list.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Calculate the page number for this column
+    const targetPage = Math.floor(columnIndex / itemsPerPage) + 1;
+    setSkewnessPage(targetPage);
+    
+    // Clear the input
+    setGoToSkewnessIdInput("");
+    
+    // Notify the user
+    toast({
+      title: "Column found",
+      description: `Navigated to skewed column with ID #${id}.`
+    });
+  };
+  
+  // Jump to page containing a specific column ID in consistency section
+  const jumpToConsistencyColumnId = (id: string) => {
+    if (!id || !filteredInconsistentColumns.length) return;
+    
+    // Find the column with the specified ID in filtered consistency columns
+    const columnIndex = filteredInconsistentColumns.findIndex(col => {
+      const colId = getColumnNumericId(col.name);
+      return colId === id;
+    });
+    
+    if (columnIndex === -1) {
+      toast({
+        title: "Column not found",
+        description: `No column with ID #${id} found in the inconsistent columns list.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Calculate the page number for this column
+    const targetPage = Math.floor(columnIndex / itemsPerPage) + 1;
+    setConsistencyPage(targetPage);
+    
+    // Clear the input
+    setGoToConsistencyIdInput("");
+    
+    // Notify the user
+    toast({
+      title: "Column found",
+      description: `Navigated to inconsistent column with ID #${id}.`
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -271,7 +409,7 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
           <div className="relative mb-4">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search columns..."
+              placeholder="Search by column name or ID (#)..."
               className="pl-8"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -288,14 +426,16 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
                 <div key={column.name} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-foreground" title={column.name}>
+                      <span 
+                        className="font-medium text-foreground" 
+                        title={`Column: ${column.name} (Index: ${dataset.columns.findIndex(col => col.name === column.name) + 1})`}
+                      >
                         {column.originalName || column.name}
                       </span>
-                      {column.originalName && column.originalName !== column.name && (
-                        <Badge variant="outline" className="text-xs">
-                          ID: {column.name}
-                        </Badge>
-                      )}
+                      {/* Always show column ID in badge */}
+                      <Badge variant="secondary" className="text-xs">
+                        #{getColumnNumericId(column.name)}
+                      </Badge>
                     </div>
                     <span className="text-xs text-muted-foreground">{column.type}</span>
                   </div>
@@ -341,6 +481,29 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
                 {filteredColumns.length} columns
               </div>
               <div className="flex gap-2">
+                <div className="flex items-center mr-2">
+                  <div className="relative">
+                    <Input
+                      placeholder="Go to ID..."
+                      className="w-20 h-8 text-sm"
+                      value={goToIdInput}
+                      onChange={(e) => setGoToIdInput(e.target.value.trim())}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && goToIdInput) {
+                          jumpToColumnId(goToIdInput);
+                        }
+                      }}
+                    />
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="ml-1 h-8"
+                    onClick={() => goToIdInput && jumpToColumnId(goToIdInput)}
+                  >
+                    Go
+                  </Button>
+                </div>
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
@@ -442,7 +605,14 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
                       {displayedSkewedColumns.map((col) => (
                         <div key={col.name} className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
                           <div className="flex-1">
-                            <div className="font-medium text-foreground">{col.name}</div>
+                            <div className="font-medium text-foreground flex items-center gap-2">
+                              <span title={`Column: ${col.name} (Index: ${dataset.columns.findIndex(c => c.name === col.name) + 1})`}>
+                                {col.originalName || col.name}
+                              </span>
+                              <Badge variant="secondary" className="text-xs">
+                                #{getColumnNumericId(col.name)}
+                              </Badge>
+                            </div>
                             <div className="text-xs text-muted-foreground">
                               Skewness: {col.skewness ? col.skewness.toFixed(2) : 'N/A'}
                               {' '}
@@ -463,6 +633,29 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
                           Showing {skewnessStartIdx + 1} to {Math.min(skewnessStartIdx + itemsPerPage, filteredSkewedColumns.length)} of {filteredSkewedColumns.length} columns
                         </div>
                         <div className="flex gap-2">
+                          <div className="flex items-center mr-2">
+                            <div className="relative">
+                              <Input
+                                placeholder="Go to ID..."
+                                className="w-20 h-8 text-sm"
+                                value={goToSkewnessIdInput}
+                                onChange={(e) => setGoToSkewnessIdInput(e.target.value.trim())}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && goToSkewnessIdInput) {
+                                    jumpToSkewnessColumnId(goToSkewnessIdInput);
+                                  }
+                                }}
+                              />
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="ml-1 h-8"
+                              onClick={() => goToSkewnessIdInput && jumpToSkewnessColumnId(goToSkewnessIdInput)}
+                            >
+                              Go
+                            </Button>
+                          </div>
                           <Button
                             variant="outline"
                             size="sm"
@@ -602,7 +795,14 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
                         <div key={col.name} className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
                           <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                              <div className="font-medium text-foreground">{col.name}</div>
+                              <div className="font-medium text-foreground flex items-center gap-2">
+                                <span title={`Column: ${col.name} (Index: ${dataset.columns.findIndex(c => c.name === col.name) + 1})`}>
+                                  {col.originalName || col.name}
+                                </span>
+                                <Badge variant="secondary" className="text-xs">
+                                  #{getColumnNumericId(col.name)}
+                                </Badge>
+                              </div>
                               <div className="flex items-center gap-2">
                                 <Badge 
                                   variant={
@@ -658,6 +858,29 @@ export const DataQuality: React.FC<DataQualityProps> = ({ dataset }) => {
                           Showing {consistencyStartIdx + 1} to {Math.min(consistencyStartIdx + itemsPerPage, filteredInconsistentColumns.length)} of {filteredInconsistentColumns.length} columns
                         </div>
                         <div className="flex gap-2">
+                          <div className="flex items-center mr-2">
+                            <div className="relative">
+                              <Input
+                                placeholder="Go to ID..."
+                                className="w-20 h-8 text-sm"
+                                value={goToConsistencyIdInput}
+                                onChange={(e) => setGoToConsistencyIdInput(e.target.value.trim())}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && goToConsistencyIdInput) {
+                                    jumpToConsistencyColumnId(goToConsistencyIdInput);
+                                  }
+                                }}
+                              />
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="ml-1 h-8"
+                              onClick={() => goToConsistencyIdInput && jumpToConsistencyColumnId(goToConsistencyIdInput)}
+                            >
+                              Go
+                            </Button>
+                          </div>
                           <Button
                             variant="outline"
                             size="sm"

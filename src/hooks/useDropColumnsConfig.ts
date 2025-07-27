@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DatasetType } from '@/types/dataset';
+import { formatColumnNameWithId } from '@/lib/data-utils';
 
 interface ColumnConfig {
   columnName: string;
@@ -50,7 +51,10 @@ export function useDropColumnsConfig({ dataset }: UseDropColumnsConfigProps): Us
     const columns: Record<string, any> = {};
 
     columnConfigurations.forEach(config => {
-      columns[config.columnName] = {
+      // Format column name with ID for API
+      const formattedColumnName = formatColumnNameWithId(config.columnName, dataset);
+      
+      columns[formattedColumnName] = {
         type: "QUALITATIVE",
         step: null,
         value: null

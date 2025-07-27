@@ -53,9 +53,40 @@ export const DataTable = ({ dataset, highlightColumn }: DataTableProps) => {
     return column?.originalName || columnId;
   };
 
-  // Filter columns based on search - search both original and unique names
+  // Helper function to get ID suffix from a column name if it exists
+  const getColumnIdSuffix = (columnId: string) => {
+    const match = columnId.match(/\$(\d+)$/);
+    return match ? `#${match[1]}` : '';
+  };
+
+  // Helper function to extract numeric ID from a column
+  const getColumnNumericId = (columnId: string): number => {
+    const match = columnId.match(/\$(\d+)$/);
+    return match ? parseInt(match[1], 10) : 0;
+  };
+
+  // Filter columns based on search - search both original names and unique IDs
   const filteredColumns = dataset.columnNames.filter((col) => {
     const displayName = getColumnDisplayName(col);
+    const idSuffix = getColumnIdSuffix(col);
+    const numericId = getColumnNumericId(col);
+    
+    // If search is empty, include all columns
+    if (!search) return true;
+    
+    // If search starts with "#" or contains "id:", treat it as ID search
+    if (search.startsWith('#') || search.toLowerCase().includes('id:')) {
+      // Extract numeric part
+      const searchNumeric = search.replace(/[^\d]/g, '');
+      
+      // If we have a numeric search, match against the column ID
+      if (searchNumeric) {
+        return numericId === parseInt(searchNumeric, 10) || 
+               idSuffix.includes(searchNumeric);
+      }
+    }
+    
+    // Otherwise do a normal text search
     return displayName.toLowerCase().includes(search.toLowerCase()) || 
            col.toLowerCase().includes(search.toLowerCase());
   });
@@ -83,7 +114,7 @@ export const DataTable = ({ dataset, highlightColumn }: DataTableProps) => {
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search columns..."
+            placeholder="Search by column name or ID (#)..."
             className="pl-8"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -130,7 +161,14 @@ export const DataTable = ({ dataset, highlightColumn }: DataTableProps) => {
                   }}
                 >
                   <div className="flex items-center gap-1.5">
-                    <span title={column}>{getColumnDisplayName(column)}</span>
+                    <span title={`${getColumnDisplayName(column)} (ID: ${column})`}>
+                      {getColumnDisplayName(column)}
+                      {getColumnIdSuffix(column) && (
+                        <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
+                          {getColumnIdSuffix(column)}
+                        </span>
+                      )}
+                    </span>
                     <button
                       onClick={() => togglePinColumn(column)}
                       className="p-1 rounded-full hover:bg-muted"
@@ -151,7 +189,14 @@ export const DataTable = ({ dataset, highlightColumn }: DataTableProps) => {
                   )}
                 >
                   <div className="flex items-center gap-1.5">
-                    <span title={column}>{getColumnDisplayName(column)}</span>
+                    <span title={`${getColumnDisplayName(column)} (ID: ${column})`}>
+                      {getColumnDisplayName(column)}
+                      {getColumnIdSuffix(column) && (
+                        <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
+                          {getColumnIdSuffix(column)}
+                        </span>
+                      )}
+                    </span>
                     <button
                       onClick={() => togglePinColumn(column)}
                       className="p-1 rounded-full hover:bg-muted"

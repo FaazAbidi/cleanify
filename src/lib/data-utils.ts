@@ -1,4 +1,4 @@
-import { ColumnInfo, ColumnMapping } from "@/types/dataset";
+import { ColumnInfo, ColumnMapping, DatasetType } from "@/types/dataset";
 
 /**
  * Map internal detailed types to simplified QUANTITATIVE/QUALITATIVE types
@@ -38,24 +38,42 @@ const calculateStatsWithSampling = (
         numericValues.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / numericValues.length
       );
       
-             // Simplified distribution for large datasets (fixed 15 buckets for performance)
-       const buckets = 15;
-       const range = (stats.max as number) - (stats.min as number);
-       const bucketSize = range <= 0 ? 1 : range / buckets;
+      // Simplified distribution for large datasets (fixed 15 buckets for performance)
+      const buckets = 15;
+      const range = (stats.max as number) - (stats.min as number);
+      const bucketSize = range <= 0 ? 1 : range / buckets;
       const distribution: Record<string, number> = {};
-      
-             for (let i = 0; i < buckets; i++) {
-         const bucketMin = (stats.min as number) + i * bucketSize;
-         const bucketKey = bucketMin.toFixed(2);
-         distribution[bucketKey] = 0;
-       }
-       
-       numericValues.forEach(val => {
-         const bucketIndex = Math.min(Math.floor((val - (stats.min as number)) / bucketSize), buckets - 1);
-         const bucketKey = ((stats.min as number) + bucketIndex * bucketSize).toFixed(2);
-         distribution[bucketKey]++;
-       });
-      
+
+      console.log(`Creating distribution for sampled QUANTITATIVE data:`, {
+        min: stats.min, 
+        max: stats.max, 
+        range, 
+        buckets, 
+        bucketSize,
+        numericValuesCount: numericValues.length
+      });
+
+      // First initialize all buckets to ensure a complete distribution
+      for (let i = 0; i < buckets; i++) {
+        const bucketMin = (stats.min as number) + i * bucketSize;
+        const bucketKey = bucketMin.toFixed(2);
+        distribution[bucketKey] = 0;
+      }
+
+      // Then populate the distribution with actual counts
+      numericValues.forEach(val => {
+        const bucketIndex = Math.min(Math.floor((val - (stats.min as number)) / bucketSize), buckets - 1);
+        const bucketKey = ((stats.min as number) + bucketIndex * bucketSize).toFixed(2);
+        distribution[bucketKey]++;
+      });
+
+      console.log(`Sampled distribution created:`, {
+        distributionKeys: Object.keys(distribution).length,
+        hasData: Object.values(distribution).some(v => v > 0),
+        totalCounted: Object.values(distribution).reduce((sum, v) => sum + v, 0),
+        shouldEqual: numericValues.length
+      });
+
       stats.distribution = distribution;
       
       // Simplified outlier detection for performance
@@ -142,6 +160,11 @@ export const calculateColumnStats = (
 
   if (type === 'QUANTITATIVE') {
     const numericValues = nonNullValues.map(Number).filter(val => !isNaN(val));
+    console.log(`Processing QUANTITATIVE column with ${numericValues.length} values:`, { 
+      nonNullCount: nonNullValues.length, 
+      numericCount: numericValues.length 
+    });
+    
     if (numericValues.length > 0) {
       numericValues.sort((a, b) => a - b);
       stats.min = Math.min(...numericValues);
@@ -161,13 +184,15 @@ export const calculateColumnStats = (
       stats.isSkewed = skewnessResult.isSkewed;
       
       // Calculate distribution (histogram with buckets covering full range)
-      const distribution: Record<string | number, number> = {};
+      const distribution: Record<string, number> = {};
       
       // Dynamically determine optimal number of buckets based on data size and range
       const min = stats.min as number;
       const max = stats.max as number;
       const range = max - min;
       const uniqueValueCount = new Set(numericValues).size;
+      
+      console.log(`QUANTITATIVE distribution calculation:`, { min, max, range, uniqueValueCount });
       
       // Use Sturges' formula as a starting point: k = 1 + log2(n)
       // but with modifications for different data characteristics
@@ -192,16 +217,49 @@ export const calculateColumnStats = (
       // Handle edge case with zero or very small range
       const bucketSize = range <= 0 ? 1 : range / buckets;
       
+      console.log(`QUANTITATIVE buckets calculation:`, { buckets, bucketSize });
+      
+      // Initialize all bucket keys to ensure we have a complete distribution
+      for (let i = 0; i < buckets; i++) {
+        const bucketMin = min + i * bucketSize;
+        const bucketKey = bucketMin.toFixed(2);
+        distribution[bucketKey] = 0;
+      }
+      
+      // Now populate the buckets with values
       for (let i = 0; i < buckets; i++) {
         const bucketMin = min + i * bucketSize;
         const bucketMax = i === buckets - 1 ? max + 0.0001 : min + (i + 1) * bucketSize; // Ensure last bucket includes max value
         const bucketKey = bucketMin.toFixed(2); // String key that matches the expected type
         
-        distribution[bucketKey] = numericValues.filter(
+        const count = numericValues.filter(
           val => val >= bucketMin && (i === buckets - 1 ? val <= bucketMax : val < bucketMax)
         ).length;
+        
+        distribution[bucketKey] = count;
       }
+      
+      const distributionStats = {
+        keys: Object.keys(distribution).length,
+        hasData: Object.values(distribution).some(v => v > 0),
+        totalCounted: Object.values(distribution).reduce((sum, v) => sum + v, 0),
+        shouldEqual: numericValues.length
+      };
+      
+      console.log(`QUANTITATIVE distribution created:`, distributionStats);
+      console.log("Sample distribution:", Object.entries(distribution).slice(0, 3));
+      
+      const distributionObj = {...distribution}; // Make a separate copy
       stats.distribution = distribution;
+
+      // Debug: Check that distribution has been correctly added to stats
+      console.log(`Distribution added to QUANTITATIVE stats:`, {
+        columnWithType: `${type} column`,
+        hasDistribution: !!stats.distribution,
+        keyCount: Object.keys(distributionObj).length,
+        totalCount: Object.values(distributionObj).reduce((sum, val) => sum + val, 0),
+        sampleKeys: Object.keys(distributionObj).slice(0, 3)
+      });
       
       // Use the new outlier detection algorithm (but skip for very large datasets)
       if (numericValues.length <= 1000) {
@@ -210,6 +268,11 @@ export const calculateColumnStats = (
       } else {
         stats.outliers = 0; // Skip outlier calculation for performance
       }
+      
+      // Explicitly check that distribution is attached to stats
+      console.log("Final QUANTITATIVE stats has distribution:", stats.distribution !== undefined);
+    } else {
+      console.warn("QUANTITATIVE column has no valid numeric values");
     }
   } else if (type === 'QUALITATIVE') {
     // Calculate frequency distribution
@@ -604,17 +667,41 @@ const inferDataTypeDetailed = (values: any[]): 'numeric' | 'categorical' | 'date
 
 /**
  * Create data types object from column data for storage in TaskMethods.data_types
+ * Uses the "originalName$id" format to handle duplicate column names
  */
-export const createDataTypesFromColumns = (columns: ColumnInfo[]): Record<string, 'QUANTITATIVE' | 'QUALITATIVE'> => {
+export const createDataTypesFromColumns = (columns: ColumnInfo[], dataset: DatasetType | null): Record<string, 'QUANTITATIVE' | 'QUALITATIVE'> => {
   const dataTypes: Record<string, 'QUANTITATIVE' | 'QUALITATIVE'> = {};
-  columns.forEach(column => {
-    dataTypes[column.name] = column.type;
+  
+  if (!columns || columns.length === 0) {
+    console.error('createDataTypesFromColumns: No columns provided');
+    return dataTypes;
+  }
+  
+  console.log(`Creating data types for ${columns.length} columns`);
+  
+  columns.forEach((column, index) => {
+    try {
+      // Create key ONLY in the format "originalName$columnId" to handle duplicate column names
+      const formattedColumnKey = formatColumnNameWithId(column.name, column.originalName, index);
+      dataTypes[formattedColumnKey] = column.type;
+      
+      // Debug log for the first few columns
+      if (index < 5) {
+        console.log(`Column ${index} key: ${formattedColumnKey}, type: ${column.type}, name: ${column.name}, originalName: ${column.originalName}`);
+      }
+    } catch (error) {
+      console.error(`Error formatting column key for column ${column.name}:`, error);
+    }
   });
+  
+  console.log(`Created ${Object.keys(dataTypes).length} data type entries`);
+  
   return dataTypes;
 };
 
 /**
  * Create column info array from stored data types and column data
+ * Handles data types stored in "originalName$id" format
  */
 export const createColumnsFromDataTypes = (
   rawData: any[][],
@@ -628,14 +715,21 @@ export const createColumnsFromDataTypes = (
     const name = columnNames[i];
     const columnData = rawData.map(row => row[i]);
     
-    // Use stored data type if available, otherwise infer
-    const type = storedDataTypes[name] || inferSimplifiedDataType(columnData);
+    // Get original name from column mapping if available
+    const originalName = columnMapping?.idToOriginalMap?.[name];
+    
+    // First try to find data type using the formatted name$id key
+    const formattedKey = originalName ? `${originalName}$${name}` : name;
+    
+    // Try to get stored data type using formatted key, then try using just the column name,
+    // otherwise infer the type from data
+    const type = 
+      storedDataTypes[formattedKey] || 
+      storedDataTypes[name] || 
+      inferSimplifiedDataType(columnData);
     
     // Calculate stats using the determined type
     const stats = calculateColumnStats(columnData, type);
-    
-    // Get original name from column mapping if available
-    const originalName = columnMapping?.idToOriginalMap?.[name];
     
     const columnInfo: ColumnInfo = {
       name,
@@ -644,7 +738,20 @@ export const createColumnsFromDataTypes = (
       uniqueValues: stats.uniqueValues || 0,
       missingValues: stats.missingValues || 0,
       missingPercent: stats.missingPercent || 0,
-      ...stats,
+      // Explicitly set stats properties
+      distribution: stats.distribution,
+      min: stats.min,
+      max: stats.max,
+      mean: stats.mean,
+      median: stats.median,
+      mode: stats.mode,
+      std: stats.std,
+      outliers: stats.outliers,
+      skewness: stats.skewness,
+      isSkewed: stats.isSkewed,
+      hasMixedTypes: stats.hasMixedTypes,
+      inconsistencyRatio: stats.inconsistencyRatio,
+      typeBreakdown: stats.typeBreakdown
     };
     
     columns.push(columnInfo);
@@ -655,17 +762,22 @@ export const createColumnsFromDataTypes = (
 
 /**
  * Infer data types for a new original data version
+ * Uses the "originalName$id" format for column keys
  */
 export const inferDataTypesForOriginalData = (
   rawData: any[][],
-  columnNames: string[]
+  columnNames: string[],
+  dataset: DatasetType | null
 ): Record<string, 'QUANTITATIVE' | 'QUALITATIVE'> => {
   const dataTypes: Record<string, 'QUANTITATIVE' | 'QUALITATIVE'> = {};
   
   for (let i = 0; i < columnNames.length; i++) {
     const name = columnNames[i];
     const columnData = rawData.map(row => row[i]);
-    dataTypes[name] = inferSimplifiedDataType(columnData);
+    
+    // Format the column name using name$id format if dataset is available
+    const columnKey = dataset ? formatColumnNameWithId(name, dataset) : name;
+    dataTypes[columnKey] = inferSimplifiedDataType(columnData);
   }
   
   return dataTypes;
@@ -704,19 +816,59 @@ export const updateVersionDataTypes = async (
   dataTypes: Record<string, 'QUANTITATIVE' | 'QUALITATIVE'>
 ): Promise<boolean> => {
   try {
-    const { supabase } = await import('@/integrations/supabase/client');
-    
-    const { error } = await supabase
-      .from('TaskMethods')
-      .update({ data_types: dataTypes })
-      .eq('id', versionId);
-    
-    if (error) {
-      console.error('Error updating data types:', error);
+    if (!dataTypes || Object.keys(dataTypes).length === 0) {
+      console.error('updateVersionDataTypes: No data types provided');
       return false;
     }
+
+    // Clean the data types to ensure consistent formatting
+    const cleanedDataTypes = cleanDataTypes(dataTypes);
     
-    return true;
+    console.log(`Updating data types for version ${versionId} with ${Object.keys(cleanedDataTypes).length} entries (cleaned from ${Object.keys(dataTypes).length} original entries)`);
+    console.log('Sample cleaned data types:', Object.entries(cleanedDataTypes).slice(0, 3));
+    
+    const { supabase } = await import('@/integrations/supabase/client');
+    
+    // Update with a retry mechanism in case of transient failures
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (attempts < maxAttempts) {
+      attempts++;
+      
+      try {
+        const { error, data } = await supabase
+          .from('TaskMethods')
+          .update({ data_types: cleanedDataTypes })
+          .eq('id', versionId)
+          .select('id');
+        
+        if (error) {
+          console.error(`Error updating data types (attempt ${attempts}/${maxAttempts}):`, error);
+          
+          if (attempts < maxAttempts) {
+            // Wait for a short time before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            continue;
+          }
+          return false;
+        }
+        
+        console.log('Data types updated successfully:', data);
+        return true;
+      } catch (updateError) {
+        console.error(`Error in Supabase update (attempt ${attempts}/${maxAttempts}):`, updateError);
+        
+        if (attempts < maxAttempts) {
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          continue;
+        }
+        return false;
+      }
+    }
+    
+    return false;
   } catch (error) {
     console.error('Error in updateVersionDataTypes:', error);
     return false;
@@ -818,4 +970,249 @@ export const processCSVHeaders = (csvContent: string, separator: string = ',') =
     columnMapping,
     dataStartLine: 1
   };
+};
+
+/**
+ * Format column names with their IDs for API calls
+ * @param columnName The column name (which is the unique ID)
+ * @param datasetOrOriginalName Either the dataset containing column information or the original column name
+ * @param columnIndex Optional column index (used when originalName is provided)
+ * @returns String in "displayName$id" format where id is an integer from 1 to N
+ */
+export const formatColumnNameWithId = (
+  columnName: string, 
+  datasetOrOriginalName?: DatasetType | string | null,
+  columnIndex?: number
+): string => {
+  // Handle the worker-style call with (name, originalName, index) signature
+  if (typeof datasetOrOriginalName === 'string' && columnIndex !== undefined) {
+    // Use displayName (original name or column name) and a simple numeric ID
+    const displayName = datasetOrOriginalName || columnName;
+    
+    // Ensure we use a simple numeric ID (1-based indexing)
+    const numericId = columnIndex + 1;
+    
+    // Standard format: "displayName$numericId"
+    return `${displayName}$${numericId}`;
+  }
+  
+  // Handle the original (name, dataset) signature
+  const dataset = datasetOrOriginalName as DatasetType;
+  if (!dataset || !dataset.columns) return `${columnName}$1`;
+  
+  // Find the column in the dataset
+  const column = dataset.columns.find(col => col.name === columnName);
+  if (!column) return `${columnName}$1`;
+  
+  // Find the index of the column (1-based)
+  const colIndex = dataset.columns.findIndex(col => col.name === columnName) + 1;
+  
+  // Use the display name (original column name if available) and the simple numeric ID
+  const displayName = column.originalName || columnName;
+  
+  // Return in standard format: "displayName$numericId"
+  return `${displayName}$${colIndex}`;
+};
+
+/**
+ * Test function to verify formatting behavior with various column scenarios
+ */
+export const testColumnFormatting = (dataset: DatasetType): void => {
+  if (!dataset || !dataset.columns || dataset.columns.length === 0) {
+    console.error('Cannot test column formatting - invalid dataset');
+    return;
+  }
+  
+  console.log('====== TESTING COLUMN NAME FORMATTING ======');
+  
+  // Test a few columns from the dataset
+  const testColumns = dataset.columns.slice(0, Math.min(5, dataset.columns.length));
+  
+  testColumns.forEach(column => {
+    const formatted = formatColumnNameWithId(column.name, dataset);
+    console.log(`Original: "${column.name}", Display: "${column.originalName || column.name}", Formatted: "${formatted}"`);
+  });
+  
+  // Test a column without originalName
+  const noOriginalColumn = { ...testColumns[0], originalName: undefined };
+  console.log('Testing column without originalName:');
+  console.log(`Original: "${noOriginalColumn.name}", Formatted: "${formatColumnNameWithId(noOriginalColumn.name, {
+    ...dataset,
+    columns: [noOriginalColumn, ...dataset.columns.slice(1)]
+  })}"`);
+  
+  // Test a column with duplicate name (originalName === name)
+  const duplicateColumn = { ...testColumns[0], originalName: testColumns[0].name };
+  console.log('Testing column with duplicate name:');
+  console.log(`Original: "${duplicateColumn.name}", Formatted: "${formatColumnNameWithId(duplicateColumn.name, {
+    ...dataset,
+    columns: [duplicateColumn, ...dataset.columns.slice(1)]
+  })}"`);
+  
+  console.log('=========================================');
+};
+
+/**
+ * Check if data types in database match local data types and identify inconsistencies
+ * This is a debugging utility function to help identify format mismatches
+ */
+export const checkDataTypeConsistency = (
+  storedDataTypes: Record<string, 'QUANTITATIVE' | 'QUALITATIVE'>,
+  localDataTypes: Record<string, 'QUANTITATIVE' | 'QUALITATIVE'>
+): void => {
+  console.group('Data Type Consistency Check');
+  
+  // Check if keys match
+  const storedKeys = Object.keys(storedDataTypes);
+  const localKeys = Object.keys(localDataTypes);
+  const commonKeys = storedKeys.filter(key => localKeys.includes(key));
+  
+  console.log(`Stored data types: ${storedKeys.length} entries`);
+  console.log(`Local data types: ${localKeys.length} entries`);
+  console.log(`Common keys: ${commonKeys.length} entries`);
+  
+  // Check if any keys in stored data types are not in local data types
+  const missingInLocal = storedKeys.filter(key => !localKeys.includes(key));
+  if (missingInLocal.length > 0) {
+    console.log(`${missingInLocal.length} keys in stored data types are missing in local:`);
+    missingInLocal.slice(0, 5).forEach(key => console.log(`- ${key}`));
+    if (missingInLocal.length > 5) console.log(`... and ${missingInLocal.length - 5} more`);
+  }
+  
+  // Check if any keys in local data types are not in stored data types
+  const missingInStored = localKeys.filter(key => !storedKeys.includes(key));
+  if (missingInStored.length > 0) {
+    console.log(`${missingInStored.length} keys in local data types are missing in stored:`);
+    missingInStored.slice(0, 5).forEach(key => console.log(`- ${key}`));
+    if (missingInStored.length > 5) console.log(`... and ${missingInStored.length - 5} more`);
+  }
+  
+  // Check for value differences in common keys
+  const differences = commonKeys.filter(key => storedDataTypes[key] !== localDataTypes[key]);
+  if (differences.length > 0) {
+    console.log(`${differences.length} keys have different values:`);
+    differences.slice(0, 5).forEach(key => {
+      console.log(`- ${key}: stored=${storedDataTypes[key]}, local=${localDataTypes[key]}`);
+    });
+    if (differences.length > 5) console.log(`... and ${differences.length - 5} more`);
+  }
+  
+  console.groupEnd();
+};
+
+/**
+ * Clean data types object by removing duplicates and ensuring consistent formatting
+ * This can be used to fix existing data in the database
+ * @param dataTypes The data types object to clean
+ * @returns A new data types object with only name$id format keys
+ */
+export const cleanDataTypes = (
+  dataTypes: Record<string, 'QUANTITATIVE' | 'QUALITATIVE'>
+): Record<string, 'QUANTITATIVE' | 'QUALITATIVE'> => {
+  const cleanedTypes: Record<string, 'QUANTITATIVE' | 'QUALITATIVE'> = {};
+  
+  // First pass: identify all keys that follow the name$id pattern
+  const regex = /^(.+)\$(\d+)$/;
+  const nameIdKeys: string[] = [];
+  const otherKeys: string[] = [];
+  
+  Object.keys(dataTypes).forEach(key => {
+    if (regex.test(key)) {
+      nameIdKeys.push(key);
+    } else {
+      otherKeys.push(key);
+    }
+  });
+  
+  // Keep all properly formatted name$id keys
+  nameIdKeys.forEach(key => {
+    cleanedTypes[key] = dataTypes[key];
+  });
+  
+  // Log info about what was removed
+  const removedCount = Object.keys(dataTypes).length - nameIdKeys.length;
+  console.log(`Cleaned ${removedCount} duplicate/invalid keys from data types`);
+  if (otherKeys.length > 0) {
+    console.log(`Examples of removed keys:`, otherKeys.slice(0, 5));
+  }
+  
+  return cleanedTypes;
+};
+
+/**
+ * Utility function to clean data types for all versions of a task
+ * This can be used to fix existing data in the database
+ * @param taskId The ID of the task whose versions need to be cleaned
+ * @returns True if successful, false otherwise
+ */
+export const cleanAllVersionDataTypes = async (taskId: string): Promise<boolean> => {
+  try {
+    const { supabase } = await import('@/integrations/supabase/client');
+    
+    // Get all versions for this task
+    const { data: versions, error: versionsError } = await supabase
+      .from('TaskMethods')
+      .select('id, data_types')
+      .eq('task', taskId);
+    
+    if (versionsError || !versions) {
+      console.error('Error fetching task versions:', versionsError);
+      return false;
+    }
+    
+    console.log(`Found ${versions.length} versions for task ${taskId}`);
+    
+    // Process each version
+    let successCount = 0;
+    for (const version of versions) {
+      // Check if data_types exists and is an object
+      if (version.data_types && typeof version.data_types === 'object' && !Array.isArray(version.data_types)) {
+        try {
+          // Cast to the expected type with validation
+          const typedDataTypes: Record<string, 'QUANTITATIVE' | 'QUALITATIVE'> = {};
+          let isValid = true;
+          
+          // Validate each entry
+          Object.entries(version.data_types).forEach(([key, value]) => {
+            if (typeof key === 'string' && (value === 'QUANTITATIVE' || value === 'QUALITATIVE')) {
+              typedDataTypes[key] = value;
+            } else {
+              isValid = false;
+              console.error(`Invalid data type entry: ${key}: ${value}`);
+            }
+          });
+          
+          if (!isValid) {
+            console.error(`Skipping version ${version.id} due to invalid data types`);
+            continue;
+          }
+          
+          // Clean the data types
+          const cleanedDataTypes = cleanDataTypes(typedDataTypes);
+          
+          // Update in database
+          const { error } = await supabase
+            .from('TaskMethods')
+            .update({ data_types: cleanedDataTypes })
+            .eq('id', version.id);
+          
+          if (error) {
+            console.error(`Error updating version ${version.id}:`, error);
+          } else {
+            successCount++;
+          }
+        } catch (versionError) {
+          console.error(`Error processing version ${version.id}:`, versionError);
+        }
+      } else {
+        console.log(`Version ${version.id} has no data types to clean`);
+      }
+    }
+    
+    console.log(`Successfully cleaned ${successCount} of ${versions.length} versions`);
+    return successCount > 0;
+  } catch (error) {
+    console.error('Error in cleanAllVersionDataTypes:', error);
+    return false;
+  }
 };

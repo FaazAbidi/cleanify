@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getErrorMessage } from '@/lib/utils';
+import { formatColumnNameWithId } from '@/lib/data-utils';
 import { Tables } from '@/integrations/supabase/types';
 import { useAuth } from './useAuth';
 import { MethodConfig, MethodConfigWithTaskMethodId } from '@/types/methods';
+import { DatasetType } from '@/types/dataset';
 
 // Status types for preprocessing - must match the database enum values
 export type PreprocessingStatus = 'RUNNING' | 'RAW' | 'PROCESSED' | 'FAILED';
@@ -13,6 +15,7 @@ export type UIPreprocessingStatus = PreprocessingStatus | 'PENDING' | 'PROCESSIN
 
 interface StartPreprocessingParams {
   versionId: number;
+  dataset?: DatasetType | null;
 }
 
 export function usePreprocessingPipeline() {
@@ -56,7 +59,7 @@ export function usePreprocessingPipeline() {
   }, []);
 
   // Start preprocessing via API call
-  const startPreprocessing = useCallback(async ({ versionId }: StartPreprocessingParams) => {
+  const startPreprocessing = useCallback(async ({ versionId, dataset }: StartPreprocessingParams) => {
     setIsStarting(true);
     setError(null);
     setCurrentVersionId(versionId);
@@ -74,15 +77,22 @@ export function usePreprocessingPipeline() {
         return { success: false, error: 'User not found. Please sign in to continue.' };
       }
 
-
-      console.log('Hitting preprocessing endpoint');
       // Make API call to trigger preprocessing
       const config = taskMethod.config as object;
+      
+      // Transform column names in config to include IDs if dataset is provided
+      const transformedConfig = dataset 
+        ? transformColumnNames(config, dataset) 
+        : config;
+
       const body = {
-        ...config,
+        ...transformedConfig,
         'userId': user?.id,
         'taskMethodId': taskMethod.id,
       }
+
+      console.log('Hitting preprocessing endpoint with body:', body);
+      
       const response = await fetch(`${import.meta.env.VITE_BACKEND_API}/preprocess`, {
         method: 'POST',
         headers: {
@@ -90,22 +100,17 @@ export function usePreprocessingPipeline() {
         },
         body: JSON.stringify(body),
       });
-
-      console.log('Response:', response);
       
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to start preprocessing');
       }
-
-      console.log('Response:', response);
       
-      console.log('Starting preprocessing for version:', versionId);
-
+      // Update the database status to RUNNING
       await updateTaskMethod(versionId, 'RUNNING');
+      console.log('Updated task method status to RUNNING in database');
       
-      console.log('Updated task method status to RUNNING');
-      // Set status to RUNNING (which is a valid enum value in the database)
+      // Set local state to RUNNING
       setCurrentStatus('RUNNING');
       
       return { success: true, versionId };
@@ -116,7 +121,51 @@ export function usePreprocessingPipeline() {
     } finally {
       setIsStarting(false);
     }
-  }, [checkVersionStatus, user]);
+  }, [fetchTaskMethod, user, updateTaskMethod]);
+
+  // Function to transform column names to include their IDs
+  const transformColumnNames = (config: any, dataset: DatasetType) => {
+    if (!config || !dataset) return config;
+
+    const transformedConfig = { ...config };
+    
+    console.log('Original config columns:', config.columns ? Object.keys(config.columns) : 'No columns');
+    
+    // Handle columns object if it exists
+    if (transformedConfig.columns && typeof transformedConfig.columns === 'object') {
+      const newColumns: Record<string, any> = {};
+      
+      // Transform each column key
+      Object.entries(transformedConfig.columns).forEach(([columnName, columnConfig]) => {
+        const newColumnName = formatColumnNameWithId(columnName, dataset);
+        console.log(`Column transformed: "${columnName}" => "${newColumnName}"`);
+        newColumns[newColumnName] = columnConfig;
+      });
+      
+      transformedConfig.columns = newColumns;
+      console.log('Transformed config columns:', Object.keys(transformedConfig.columns));
+    }
+    
+    // Handle target column if it exists
+    if (transformedConfig.target && typeof transformedConfig.target === 'string') {
+      const originalTarget = transformedConfig.target;
+      transformedConfig.target = formatColumnNameWithId(transformedConfig.target, dataset);
+      console.log(`Target transformed: "${originalTarget}" => "${transformedConfig.target}"`);
+    }
+    
+    // Handle selectedColumns array if it exists
+    if (Array.isArray(transformedConfig.selectedColumns)) {
+      transformedConfig.selectedColumns = transformedConfig.selectedColumns.map(
+        (col: string) => {
+          const transformedCol = formatColumnNameWithId(col, dataset);
+          console.log(`Selected column transformed: "${col}" => "${transformedCol}"`);
+          return transformedCol;
+        }
+      );
+    }
+    
+    return transformedConfig;
+  };
 
   // Poll for status changes
   const startPolling = useCallback((versionId: number) => {

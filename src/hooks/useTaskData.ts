@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { DatasetType, ColumnMapping } from "@/types/dataset";
 import { Tables } from "@/integrations/supabase/types";
-import { calculateColumnStats, inferSimplifiedDataType, detectCSVSeparator, createColumnsFromDataTypes, inferDataTypesForOriginalData, createDataTypesFromColumns, processCSVHeaders, generateUniqueColumnIdentifiers } from "@/lib/data-utils";
+import { calculateColumnStats, inferSimplifiedDataType, detectCSVSeparator, createColumnsFromDataTypes, inferDataTypesForOriginalData, createDataTypesFromColumns, processCSVHeaders, generateUniqueColumnIdentifiers, testColumnFormatting } from "@/lib/data-utils";
 import { useToast } from "@/components/ui/use-toast";
 import { TaskVersion } from "@/types/version";
 import { ColumnInfo } from "@/types/dataset";
@@ -345,6 +345,16 @@ export function useTaskData() {
         dataTypesToUse = storedDataTypes;
         // Use unique headers and column mapping for stored data types
         columns = createColumnsFromDataTypes(rowData, uniqueHeaders, storedDataTypes, columnMapping);
+
+        // After this line, add some debug code to check if distribution data is present in columns
+        console.log('Columns after createColumnsFromDataTypes:', 
+          columns.slice(0, 2).map(col => ({ 
+            name: col.name, 
+            type: col.type, 
+            hasDistribution: !!col.distribution,
+            distributionKeys: col.distribution ? Object.keys(col.distribution).length : 0
+          }))
+        );
       } else {
         // Fallback: infer data types and store them if this is an original version
         console.log('No stored data types found, inferring data types');
@@ -364,7 +374,8 @@ export function useTaskData() {
                 dataTypesToUse[uniqueId] = type;
                 
                 const stats = calculateColumnStats(columnData, type);
-                
+
+                // Ensure distribution is present in the column info by accessing it explicitly
                 const columnInfo = {
                   name: uniqueId,
                   originalName: originalName,
@@ -372,7 +383,21 @@ export function useTaskData() {
                   uniqueValues: stats.uniqueValues || 0,
                   missingValues: stats.missingValues || 0,
                   missingPercent: stats.missingPercent || 0,
-                  ...stats,
+                  // Ensure these stats are explicitly assigned
+                  distribution: stats.distribution,
+                  min: stats.min,
+                  max: stats.max,
+                  mean: stats.mean,
+                  median: stats.median,
+                  mode: stats.mode,
+                  std: stats.std,
+                  outliers: stats.outliers,
+                  skewness: stats.skewness,
+                  isSkewed: stats.isSkewed,
+                  // Other properties
+                  hasMixedTypes: stats.hasMixedTypes,
+                  inconsistencyRatio: stats.inconsistencyRatio,
+                  typeBreakdown: stats.typeBreakdown
                 } as ColumnInfo;
                 
                 columns.push(columnInfo);
@@ -387,13 +412,26 @@ export function useTaskData() {
         }
 
         // If this is an original data version (no prev_version), store the inferred data types
-        // Store using unique IDs as keys
+        // Store using the name$id format for keys
         if (taskMethod.prev_version === null) {
           try {
-            const dataTypesToStore = columns.reduce((acc, col) => {
-              acc[col.name] = col.type; // Use unique ID as key
-              return acc;
-            }, {} as Record<string, 'QUANTITATIVE' | 'QUALITATIVE'>);
+            // Create the dataset object here so we can use it for formatting column keys
+            const tempDataset: DatasetType = {
+              filename: fileName,
+              columns: columns,
+              rows: rowData.length,
+              rawData: rowData,
+              columnNames: uniqueHeaders,
+              originalColumnNames: originalHeaders,
+              columnMapping: columnMapping,
+              missingValuesCount: 0, // Placeholder values
+              duplicateRowsCount: 0,
+              duplicateColumnsCount: 0,
+              dataTypes: {}
+            };
+            
+            // Use the utility function to create data types with formatted keys
+            const dataTypesToStore = createDataTypesFromColumns(columns, tempDataset);
             
             const { error: updateError } = await supabase
               .from('TaskMethods')
@@ -456,6 +494,9 @@ export function useTaskData() {
         correlationData: { matrix: [], labels: [] }
       };
       
+      // Test column formatting to verify it's working correctly
+      testColumnFormatting(dataset);
+
       // Calculate correlations (potentially expensive)
       const columnTypesArray = uniqueHeaders.map(uniqueId => dataTypesToUse[uniqueId]);
       const correlationData = await calculateCorrelation(rowData, uniqueHeaders, columnTypesArray);

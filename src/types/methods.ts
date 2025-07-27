@@ -24,13 +24,15 @@ export interface PreAnalysisConfig {
   task_id: string;
   method: 'pre_analysis';
   model: PreAnalysisModel;
-  target: string | null;
+  target?: string | null;
+  target_variable?: string | null;  // Alternative field name used in API
   threshold_check_categorical: number;
   threshold_check_skewness: number;
   threshold_sampling: number;
   threshold_check_dimensionality: number;
   threshold_check_multicollinearity: number;
   columns: Record<string, PreAnalysisColumnConfig> | null;
+  selected_columns?: string[];  // Optional field for column selection
 }
 
 // Pre-analysis column configuration

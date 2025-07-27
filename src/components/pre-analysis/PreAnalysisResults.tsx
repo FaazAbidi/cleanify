@@ -52,7 +52,7 @@ interface RecommendationCardProps {
   recommendation: string;
   icon: React.ComponentType<{ className?: string }>;
   variant?: 'info' | 'warning' | 'success';
-  items?: string[];
+  items?: any[]; // Change type from string[] to any[] to handle mixed types
   counts?: Array<{ column: string; count: number }>;
   noDataMessage?: string;
 }
@@ -94,15 +94,26 @@ const RecommendationCard = ({ title, recommendation, icon: Icon, variant = 'info
                   </span>
                 </Badge>
               ))}
-              {items && items.filter(item => item && item.trim() !== '').map((item, index) => (
-                <Badge 
-                  key={index} 
-                  variant="outline" 
-                  className="px-3 py-1.5 text-sm bg-background/60 hover:bg-background/80 transition-colors font-medium"
-                >
-                  {item}
-                </Badge>
-              ))}
+              {items && items
+                .filter(item => {
+                  // Filter out null, undefined, and empty strings
+                  if (item === null || item === undefined) return false;
+                  // If it's a string, check if it's not empty after trimming
+                  if (typeof item === 'string') return item.trim() !== '';
+                  // For other types, keep them
+                  return true;
+                })
+                .map((item, index) => (
+                  <Badge 
+                    key={index} 
+                    variant="outline" 
+                    className="px-3 py-1.5 text-sm bg-background/60 hover:bg-background/80 transition-colors font-medium"
+                  >
+                    {/* Convert item to string for display */}
+                    {String(item)}
+                  </Badge>
+                ))
+              }
             </div>
           </div>
         ) : (

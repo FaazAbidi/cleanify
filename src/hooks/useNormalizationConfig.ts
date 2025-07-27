@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { DatasetType } from '@/types/dataset';
+import { formatColumnNameWithId } from '@/lib/data-utils';
 
 type ColumnConfig = {
   columnName: string;
@@ -42,7 +43,7 @@ export function useNormalizationConfig({ dataset }: UseNormalizationConfigProps)
   }, [selectedColumns, dataset]);
   
   // Generate payload for API call
-  const generatePayload = () => {
+  const generatePayload = useCallback(() => {
     if (!dataset || !selectedColumns.length || !columnConfigurations.length) {
       return null;
     }
@@ -50,7 +51,10 @@ export function useNormalizationConfig({ dataset }: UseNormalizationConfigProps)
     const columns: Record<string, any> = {};
     
     columnConfigurations.forEach(config => {
-      columns[config.columnName] = {
+      // Format column name with ID for API
+      const formattedColumnName = formatColumnNameWithId(config.columnName, dataset);
+      
+      columns[formattedColumnName] = {
         type: "QUANTITATIVE",
         step: null,
         value: null
@@ -65,7 +69,7 @@ export function useNormalizationConfig({ dataset }: UseNormalizationConfigProps)
       target: null,
       columns
     };
-  };
+  }, [dataset, selectedColumns, columnConfigurations]);
   
   return {
     selectedColumns,

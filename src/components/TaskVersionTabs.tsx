@@ -195,7 +195,10 @@ export const TaskVersionTabs = memo(forwardRef<TaskVersionTabsRef, TaskVersionTa
                 console.log(`Starting preprocessing for new version: ${newVersionId}`);
                 
                 // Start the preprocessing pipeline
-                startPreprocessing({ versionId: newVersionId })
+                startPreprocessing({ 
+                  versionId: newVersionId,
+                  dataset: dataset 
+                })
                   .then(result => {
                     if (result?.success) {
                       refreshVersions(newVersionId);
